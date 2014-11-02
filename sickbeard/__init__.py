@@ -32,7 +32,7 @@ import os.path
 sys.path.append(os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
-from providers import ezrss, tvtorrents, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
+from providers import deildu, ezrss, tvtorrents, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, fanzub, torrentbytes, animezb, \
     freshontv, bitsoup, t411, tokyotoshokan
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
@@ -236,6 +236,10 @@ WOMBLE = False
 OMGWTFNZBS = False
 OMGWTFNZBS_USERNAME = None
 OMGWTFNZBS_APIKEY = None
+
+#deildu = False
+#deildu_USERNAME = None
+#deildu_PASSWORD = None
 
 NEWZBIN = False
 NEWZBIN_USERNAME = None
@@ -510,6 +514,7 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'General')
         CheckSection(CFG, 'Blackhole')
         CheckSection(CFG, 'Newzbin')
+#	CheckSection(CFG, 'deildu')
         CheckSection(CFG, 'SABnzbd')
         CheckSection(CFG, 'NZBget')
         CheckSection(CFG, 'XBMC')
@@ -716,6 +721,10 @@ def initialize(consoleLogging=True):
         NEWZBIN = bool(check_setting_int(CFG, 'Newzbin', 'newzbin', 0))
         NEWZBIN_USERNAME = check_setting_str(CFG, 'Newzbin', 'newzbin_username', '')
         NEWZBIN_PASSWORD = check_setting_str(CFG, 'Newzbin', 'newzbin_password', '')
+
+#        deildu = bool(check_setting_int(CFG, 'deildu', 'deildu', 0))
+#        deildu_USERNAME = check_setting_str(CFG, 'deildu', 'deildu_username', '')
+#        deildu_PASSWORD = check_setting_str(CFG, 'deildu', 'deildu_password', '')
 
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
@@ -1567,6 +1576,12 @@ def save_config():
     new_config['NZBs']['nzbs'] = int(NZBS)
     new_config['NZBs']['nzbs_uid'] = NZBS_UID
     new_config['NZBs']['nzbs_hash'] = NZBS_HASH
+
+#    new_config['deildu'] = {}
+#    new_config['deildu']['deildu'] = int(deildu)
+#    new_config['deildu']['deildu_username'] = deildu_USERNAME
+#    new_config['deildu']['deildu_password'] = helpers.encrypt(deildu_PASSWORD, ENCRYPTION_VERSION)
+
 
     new_config['Newzbin'] = {}
     new_config['Newzbin']['newzbin'] = int(NEWZBIN)
