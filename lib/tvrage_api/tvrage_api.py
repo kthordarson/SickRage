@@ -479,9 +479,9 @@ class TVRage:
 
         if resp.ok:
             try:
-                return xmltodict.parse(resp.content.strip().encode('utf-8'), postprocessor=remap_keys)
-            except:
                 return xmltodict.parse(resp.content.strip(), postprocessor=remap_keys)
+            except:
+                return dict([(u'data', None)])
 
     def _getetsrc(self, url, params=None):
         """Loads a URL using caching, returns an ElementTree of the source
@@ -664,7 +664,7 @@ class TVRage:
                 self._getShowData(key, True)
             return self.shows[key]
 
-        key = str(key).lower()
+        key = key.lower()
         self.config['searchterm'] = key
         selected_series = self._getSeries(key)
         if isinstance(selected_series, dict):
