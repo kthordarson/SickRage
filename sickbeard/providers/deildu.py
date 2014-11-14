@@ -25,6 +25,7 @@ from sickbeard.common import Quality
 from sickbeard import logger
 from sickbeard import tvcache
 from sickbeard import show_name_helpers
+from sickbeard import helpers
 from sickbeard.common import Overview
 from sickbeard.exceptions import ex
 from lib import requests
@@ -33,11 +34,19 @@ from bs4 import BeautifulSoup
 
 class deilduProvider(generic.TorrentProvider):
     urls = {
+<<<<<<< HEAD
 	        'base_url': 'http://icetracker.org/',
 	        'login': 'http://icetracker.org/takelogin.php',
 	        'detail': 'http://icetracker.org/details.php?id=%s',
 	        'search': 'http://icetracker.org/browse.php?search=%s%s',
 	        'base': 'http://icetracker.org/',
+=======
+        'base_url': 'http://icetracker.org/',
+        'login': 'http://icetracker.org/takelogin.php',
+        'detail': 'http://icetracker.org/details.php?id=%s',
+        'search': 'http://icetracker.org/browse.php?search=%s%s',
+        'base': 'http://icetracker.org/',
+>>>>>>> 6a09f6744ae3e788bce3a0e8f27bf5d972fc6841
      }
 
     def __init__(self):
@@ -59,10 +68,20 @@ class deilduProvider(generic.TorrentProvider):
         self.search_url = 'https://icetracker.org/browse.php?search=%s%s'
         self.rss_url = 'http://icetracker.org/rss.php'
         self.download_url = 'http://icetracker.org/details.php?id=%s'
+<<<<<<< HEAD
 	self.login = 'http://icetracker.org/takelogin.php'
+=======
+        self.login = 'http://icetracker.org/takelogin.php'
+        self.headers = {
+        # Using USER_AGENT instead of Mozilla to keep same user
+        # agent along authentication and download phases,
+        #otherwise session might be broken and download fail, asking again for authentication
+        #'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
+>>>>>>> 6a09f6744ae3e788bce3a0e8f27bf5d972fc6841
 
  #       self.url = self.urls['base_url']
-	
+
 
         self.session = None
 
@@ -90,7 +109,7 @@ class deilduProvider(generic.TorrentProvider):
                         }
 
         self.session = requests.Session()
-        logger.log(u"DEBUG deildu.py _doLogin running ...")
+        logger.log(u"DEBUG deildu.py _doLogin running ..." + self.username + " " + self.password)
         try:
             response = self.session.post(self.urls['login'], data=login_params, timeout=30)
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
@@ -165,7 +184,7 @@ class deilduProvider(generic.TorrentProvider):
                 logger.log(u"DEBUG deildu.py _doSearch .. " + str(self.urls['search']) + " " + str(self.categorie) + " " + str(search_string))
                 searchURL = self.urls['search'] % (search_string, "&sort=seeders&type=desc&cat=0")
 
-                logger.log(u"Search string: " + searchURL)
+                logger.log(u"DEILDU Search string URL: " + searchURL)
                 search_string = oldstring
                 data = self.getURL(searchURL)
                 if not data:
@@ -175,13 +194,13 @@ class deilduProvider(generic.TorrentProvider):
 
                 try:
                     if html.find(text='Nothing found!'):
-                        logger.log(u"No results found for: " + search_string + "(" + searchURL + ")")
+                        logger.log(u"DEILDU : nothing found : No results found for: " + search_string + "(" + searchURL + ")")
                         return []
 
                     result_table = html.find('table', attrs = {'class' : 'torrentlist'})
 
                     if not result_table:
-                        logger.log(u"No results found for: " + search_string + "(" + searchURL + ")")
+                        logger.log(u"DEILDU : no result table : No results found for: " + search_string + "(" + searchURL + ")")
                         return []
 
                     entries = result_table.find_all('tr')
@@ -235,21 +254,23 @@ class deilduProvider(generic.TorrentProvider):
 
         return (title, url)
 
-    def getURL(self, url, headers=None):
+#    def getURL(self, url, headers=None):
+    def getURL(self, url, post_data=None, params=None, timeout=30, json=False):
         logger.log(u"DEBUG deildu.py _getURL running...")
         if not self.session:
             self._doLogin()
 
-        if not headers:
-            headers = []
+#        if not headers:
+#            headers = []
 
         try:
             response = self.session.get(url)
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
             logger.log(u"Error loading "+self.name+" URL: " + ex(e), logger.ERROR)
             return None
+        return helpers.getURL(url, post_data=post_data, params=params, headers=self.headers, timeout=timeout, session=self.session, json=json)
 
-        return response.content
+#        return response.content
 
 class deilduCache(tvcache.TVCache):
 
