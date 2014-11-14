@@ -33,11 +33,11 @@ from bs4 import BeautifulSoup
 
 class deilduProvider(generic.TorrentProvider):
     urls = {
-	        'base_url': 'http://iceland.pm/',
-	        'login': 'http://iceland.pm/takelogin.php',
-	        'detail': 'http://iceland.pm/details.php?id=%s',
-	        'search': 'http://iceland.pm/browse.php?search=%s%s',
-	        'base': 'http://iceland.pm/',
+	        'base_url': 'http://icetracker.org/',
+	        'login': 'http://icetracker.org/takelogin.php',
+	        'detail': 'http://icetracker.org/details.php?id=%s',
+	        'search': 'http://icetracker.org/browse.php?search=%s%s',
+	        'base': 'http://icetracker.org/',
      }
 
     def __init__(self):
@@ -55,11 +55,11 @@ class deilduProvider(generic.TorrentProvider):
         self.ratio = None
 
         self.cache = deilduCache(self)
-        self.url = 'https://iceland.pm'
-        self.search_url = 'https://iceland.pm/browse.php?search=%s%s'
-        self.rss_url = 'http://iceland.pm/rss.php'
-        self.download_url = 'http://iceland.pm/details.php?id=%s'
-	self.login = 'http://iceland.pm/takelogin.php'
+        self.url = 'https://icetracker.org'
+        self.search_url = 'https://icetracker.org/browse.php?search=%s%s'
+        self.rss_url = 'http://icetracker.org/rss.php'
+        self.download_url = 'http://icetracker.org/details.php?id=%s'
+	self.login = 'http://icetracker.org/takelogin.php'
 
  #       self.url = self.urls['base_url']
 	
