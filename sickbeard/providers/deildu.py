@@ -34,19 +34,11 @@ from bs4 import BeautifulSoup
 
 class deilduProvider(generic.TorrentProvider):
     urls = {
-<<<<<<< HEAD
-	        'base_url': 'http://icetracker.org/',
-	        'login': 'http://icetracker.org/takelogin.php',
-	        'detail': 'http://icetracker.org/details.php?id=%s',
-	        'search': 'http://icetracker.org/browse.php?search=%s%s',
-	        'base': 'http://icetracker.org/',
-=======
         'base_url': 'http://icetracker.org/',
         'login': 'http://icetracker.org/takelogin.php',
         'detail': 'http://icetracker.org/details.php?id=%s',
         'search': 'http://icetracker.org/browse.php?search=%s%s',
         'base': 'http://icetracker.org/',
->>>>>>> 6a09f6744ae3e788bce3a0e8f27bf5d972fc6841
      }
 
     def __init__(self):
@@ -68,9 +60,6 @@ class deilduProvider(generic.TorrentProvider):
         self.search_url = 'https://icetracker.org/browse.php?search=%s%s'
         self.rss_url = 'http://icetracker.org/rss.php'
         self.download_url = 'http://icetracker.org/details.php?id=%s'
-<<<<<<< HEAD
-	self.login = 'http://icetracker.org/takelogin.php'
-=======
         self.login = 'http://icetracker.org/takelogin.php'
         self.headers = {
         # Using USER_AGENT instead of Mozilla to keep same user
@@ -78,7 +67,6 @@ class deilduProvider(generic.TorrentProvider):
         #otherwise session might be broken and download fail, asking again for authentication
         #'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
->>>>>>> 6a09f6744ae3e788bce3a0e8f27bf5d972fc6841
 
  #       self.url = self.urls['base_url']
 
