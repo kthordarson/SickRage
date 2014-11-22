@@ -27,14 +27,12 @@ import tarfile
 import stat
 import traceback
 
-import gh_api as github
 import sickbeard
 from sickbeard import helpers, notifiers
 from sickbeard import ui
 from sickbeard import logger
 from sickbeard.exceptions import ex
 from sickbeard import encodingKludge as ek
-
 
 class CheckVersion():
     """
@@ -129,11 +127,11 @@ class CheckVersion():
 
 
 class UpdateManager():
-    def get_github_repo_user(self):
-        return 'SiCKRAGETV'
+    def get_github_org(self):
+        return sickbeard.GIT_ORG
 
     def get_github_repo(self):
-        return 'SickRage'
+        return sickbeard.GIT_REPO
 
     def get_update_url(self):
         return sickbeard.WEB_ROOT + "/home/update/?pid=" + str(sickbeard.PID)
@@ -141,7 +139,7 @@ class UpdateManager():
 
 class WindowsUpdateManager(UpdateManager):
     def __init__(self):
-        self.github_repo_user = self.get_github_repo_user()
+        self.github_org = self.get_github_org()
         self.github_repo = self.get_github_repo()
 
         self.branch = sickbeard.BRANCH
@@ -153,7 +151,7 @@ class WindowsUpdateManager(UpdateManager):
         self._newest_version = None
 
         self.gc_url = 'http://code.google.com/p/sickbeard/downloads/list'
-        self.version_url = 'https://raw.github.com/' + self.github_repo_user + '/' + self.github_repo + '/' + self.branch + '/updates.txt'
+        self.version_url = 'https://raw.github.com/' + self.github_org + '/' + self.github_repo + '/' + self.branch + '/updates.txt'
 
     def _find_installed_version(self):
         version = ''
@@ -294,7 +292,7 @@ class WindowsUpdateManager(UpdateManager):
 class GitUpdateManager(UpdateManager):
     def __init__(self):
         self._git_path = self._find_working_git()
-        self.github_repo_user = self.get_github_repo_user()
+        self.github_org = self.get_github_org()
         self.github_repo = self.get_github_repo()
 
         self.branch = sickbeard.BRANCH
@@ -496,7 +494,7 @@ class GitUpdateManager(UpdateManager):
 
         elif self._num_commits_behind > 0:
 
-            base_url = 'http://github.com/' + self.github_repo_user + '/' + self.github_repo
+            base_url = 'http://github.com/' + self.github_org + '/' + self.github_repo
             if self._newest_commit_hash:
                 url = base_url + '/compare/' + self._cur_commit_hash + '...' + self._newest_commit_hash
             else:
@@ -572,7 +570,7 @@ class GitUpdateManager(UpdateManager):
 
 class SourceUpdateManager(UpdateManager):
     def __init__(self):
-        self.github_repo_user = self.get_github_repo_user()
+        self.github_org = self.get_github_org()
         self.github_repo = self.get_github_repo()
 
         self.branch = sickbeard.BRANCH
@@ -617,28 +615,22 @@ class SourceUpdateManager(UpdateManager):
         self._num_commits_behind = 0
         self._newest_commit_hash = None
 
-        gh = github.GitHub(self.github_repo_user, self.github_repo, self.branch)
-
         # try to get newest commit hash and commits behind directly by comparing branch and current commit
         if self._cur_commit_hash:
-            branch_compared = gh.compare(base=self.branch, head=self._cur_commit_hash)
-
-            if 'base_commit' in branch_compared:
-                self._newest_commit_hash = branch_compared['base_commit']['sha']
-
-            if 'behind_by' in branch_compared:
-                self._num_commits_behind = int(branch_compared['behind_by'])
+            branch_compared = sickbeard.gh.compare(base=self.branch, head=self._cur_commit_hash)
+            self._newest_commit_hash = branch_compared.base_commit.sha
+            self._num_commits_behind = branch_compared.behind_by
 
         # fall back and iterate over last 100 (items per page in gh_api) commits
         if not self._newest_commit_hash:
 
-            for curCommit in gh.commits():
+            for curCommit in sickbeard.gh.get_commits():
                 if not self._newest_commit_hash:
-                    self._newest_commit_hash = curCommit['sha']
+                    self._newest_commit_hash = curCommit.sha
                     if not self._cur_commit_hash:
                         break
 
-                if curCommit['sha'] == self._cur_commit_hash:
+                if curCommit.sha == self._cur_commit_hash:
                     break
 
                 # when _cur_commit_hash doesn't match anything _num_commits_behind == 100
@@ -659,7 +651,7 @@ class SourceUpdateManager(UpdateManager):
             newest_text += "&mdash; <a href=\"" + self.get_update_url() + "\">Update Now</a>"
 
         elif self._num_commits_behind > 0:
-            base_url = 'http://github.com/' + self.github_repo_user + '/' + self.github_repo
+            base_url = 'http://github.com/' + self.github_org + '/' + self.github_repo
             if self._newest_commit_hash:
                 url = base_url + '/compare/' + self._cur_commit_hash + '...' + self._newest_commit_hash
             else:
@@ -680,7 +672,7 @@ class SourceUpdateManager(UpdateManager):
         Downloads the latest source tarball from github and installs it over the existing version.
         """
 
-        base_url = 'http://github.com/' + self.github_repo_user + '/' + self.github_repo
+        base_url = 'http://github.com/' + self.github_org + '/' + self.github_repo
         tar_download_url = base_url + '/tarball/' + self.branch
 
         try:
@@ -764,5 +756,4 @@ class SourceUpdateManager(UpdateManager):
         return True
 
     def list_remote_branches(self):
-        gh = github.GitHub(self.github_repo_user, self.github_repo, self.branch)
-        return [x['name'] for x in gh.branches() if x and 'name' in x]
+        return [x.name for x in sickbeard.gh.get_branches() if x]

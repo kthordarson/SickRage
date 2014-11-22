@@ -56,7 +56,7 @@ import threading
 import getopt
 
 import sickbeard
-from sickbeard import db, logger, network_timezones, failed_history, name_cache, versionChecker
+from sickbeard import db, logger, network_timezones, failed_history, name_cache
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import SRWebServer
 from sickbeard.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
@@ -67,7 +67,6 @@ throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 
 signal.signal(signal.SIGINT, sickbeard.sig_handler)
 signal.signal(signal.SIGTERM, sickbeard.sig_handler)
-
 
 class SickRage(object):
     def __init__(self):

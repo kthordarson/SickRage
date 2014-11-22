@@ -82,6 +82,7 @@ from lib import adba
 from Cheetah.Template import Template
 from tornado.web import RequestHandler, HTTPError, asynchronous
 
+from bug_tracker import BugTracker
 
 def authenticated(handler_class):
     def wrap_execute(handler_execute):
@@ -270,7 +271,7 @@ class MainHandler(RequestHandler):
             image_file_name = None
             if which == 'poster':
                 image_file_name = cache_obj.poster_path(show)
-            if which == 'poster_thumb':
+            if which == 'poster_thumb' or which == 'small':
                 image_file_name = cache_obj.poster_thumb_path(show)
             if which == 'banner':
                 image_file_name = cache_obj.banner_path(show)
@@ -1462,7 +1463,6 @@ class ConfigGeneral(MainHandler):
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
 
-
     def saveAddShowDefaults(self, defaultStatus, anyQualities, bestQualities, defaultFlattenFolders, subtitles=False,
                             anime=False, scene=False):
 
@@ -1769,10 +1769,20 @@ class ConfigPostProcessing(MainHandler):
         sickbeard.PROCESS_AUTOMATICALLY = config.checkbox_to_value(process_automatically)
         config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
 
-        if sickbeard.PROCESS_AUTOMATICALLY:
+        if sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcesserScheduler.isAlive():
             sickbeard.autoPostProcesserScheduler.silent = False
-        else:
+            try:
+                sickbeard.autoPostProcesserScheduler.start()
+            except:
+                pass
+        elif not sickbeard.PROCESS_AUTOMATICALLY:
+            sickbeard.autoPostProcesserScheduler.stop.set()
             sickbeard.autoPostProcesserScheduler.silent = True
+            try:
+                sickbeard.autoPostProcesserScheduler.join(5)
+            except:
+                pass
+
 
         if unpack:
             if self.isRarSupported() != 'not supported':
@@ -2592,11 +2602,13 @@ class ConfigSubtitles(MainHandler):
 
         if use_subtitles == "on" and not sickbeard.subtitlesFinderScheduler.isAlive():
             sickbeard.subtitlesFinderScheduler.silent = False
-            sickbeard.subtitlesFinderScheduler.start()
-        else:
+            try:
+                sickbeard.subtitlesFinderScheduler.start()
+            except:
+                pass
+        elif not use_subtitles == "on":
             sickbeard.subtitlesFinderScheduler.stop.set()
             sickbeard.subtitlesFinderScheduler.silent = True
-            logger.log(u"Waiting for the SUBTITLESFINDER thread to exit")
             try:
                 sickbeard.subtitlesFinderScheduler.join(5)
             except:
@@ -3036,7 +3048,7 @@ class NewHomeAddShows(MainHandler):
             ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
         else:
             logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
-            return
+            return "No root directories setup, please go back and add one."
 
         # done adding show
         redirect('/home/')
