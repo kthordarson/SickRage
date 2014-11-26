@@ -238,13 +238,14 @@ class deilduProvider(generic.TorrentProvider):
         logger.log(u"DEBUG deildu.py _get_title_and_url running we got title: " + title + " url " + url)
         if url:
             url = str(url).replace('&amp;','&')
-            logger.log(u"DEBUG deildu.py now url got changed to: " + url )
-
+            logger.log(u"DEBUG deildu.py : " + url )
+        title = unicode(title)
+#        url = unicode(url)
         return (title, url)
 
 #    def getURL(self, url, headers=None):
     def getURL(self, url, post_data=None, params=None, timeout=30, json=False):
-        logger.log(u"DEBUG deildu.py _getURL running...")
+        logger.log(u"DEBUG deildu.py _getURL running: " + url)
         if not self.session:
             self._doLogin()
 
@@ -288,7 +289,8 @@ class deilduCache(tvcache.TVCache):
             return
 
         logger.log(u"Adding item to cache: "+title)
-
+        title = unicode(title)
+#        url = unicode(url)
         self._addCacheEntry(title, url)
 
 provider = deilduProvider()

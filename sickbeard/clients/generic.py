@@ -156,7 +156,7 @@ class GenericClient(object):
     def sendTORRENT(self, result):
 
         r_code = False
-
+        logger.log(u'Generic sendTORRENT running...')
         logger.log(u'Calling ' + self.name + ' Client', logger.DEBUG)
 
         if not self._get_auth():
