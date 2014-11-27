@@ -169,10 +169,13 @@ class GenericClient(object):
 
             # lazy fix for now, I'm sure we already do this somewhere else too
             result = self._get_torrent_hash(result)
+            logger.log(u'Generic sendtorrent result found... ' + result.name)
 
             if result.url.startswith('magnet'):
+                logger.log(u'Generic sendtorrent magnet link found....')
                 r_code = self._add_torrent_uri(result)
             else:
+                logger.log(u'Generic sendtorrent torrent file downloading...')
                 r_code = self._add_torrent_file(result)
 
             if not r_code:
