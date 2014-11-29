@@ -65,7 +65,9 @@ from lib.dateutil import tz
 from lib.unrar2 import RarFile
 
 from lib import adba, subliminal
-from lib.trakt import TraktCall
+
+from lib.trakt import TraktAPI
+from lib.trakt.exceptions import traktException, traktAuthException, traktServerBusy
 
 try:
     import json
@@ -76,7 +78,6 @@ try:
     import xml.etree.cElementTree as etree
 except ImportError:
     import xml.etree.ElementTree as etree
-
 
 from Cheetah.Template import Template
 from tornado.web import RequestHandler, HTTPError, asynchronous
@@ -282,6 +283,7 @@ class MainHandler(RequestHandler):
                 image_path = image_file_name
 
         from mimetypes import MimeTypes
+
         mime_type, encoding = MimeTypes().guess_type(image_path)
         self.set_header('Content-Type', mime_type)
         with file(image_path, 'rb') as img:
@@ -1761,7 +1763,7 @@ class ConfigPostProcessing(MainHandler):
 
 
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
-                           xbmc_data=None, xbmc_12plus_data=None, mediabrowser_data=None, sony_ps3_data=None,
+                           kodi_data=None, kodi_12plus_data=None, mediabrowser_data=None, sony_ps3_data=None,
                            wdtv_data=None, tivo_data=None, mede8er_data=None,
                            keep_processed_dir=None, process_method=None, process_automatically=None,
                            rename_episodes=None, airdate_episodes=None, unpack=None,
@@ -1821,16 +1823,16 @@ class ConfigPostProcessing(MainHandler):
         sickbeard.SKIP_REMOVED_FILES = config.checkbox_to_value(skip_removed_files)
         sickbeard.NFO_RENAME = config.checkbox_to_value(nfo_rename)
 
-        sickbeard.METADATA_XBMC = xbmc_data
-        sickbeard.METADATA_XBMC_12PLUS = xbmc_12plus_data
+        sickbeard.METADATA_KODI = kodi_data
+        sickbeard.METADATA_KODI_12PLUS = kodi_12plus_data
         sickbeard.METADATA_MEDIABROWSER = mediabrowser_data
         sickbeard.METADATA_PS3 = sony_ps3_data
         sickbeard.METADATA_WDTV = wdtv_data
         sickbeard.METADATA_TIVO = tivo_data
         sickbeard.METADATA_MEDE8ER = mede8er_data
 
-        sickbeard.metadata_provider_dict['XBMC'].set_config(sickbeard.METADATA_XBMC)
-        sickbeard.metadata_provider_dict['XBMC 12+'].set_config(sickbeard.METADATA_XBMC_12PLUS)
+        sickbeard.metadata_provider_dict['KODI'].set_config(sickbeard.METADATA_KODI)
+        sickbeard.metadata_provider_dict['KODI 12+'].set_config(sickbeard.METADATA_KODI_12PLUS)
         sickbeard.metadata_provider_dict['MediaBrowser'].set_config(sickbeard.METADATA_MEDIABROWSER)
         sickbeard.metadata_provider_dict['Sony PS3'].set_config(sickbeard.METADATA_PS3)
         sickbeard.metadata_provider_dict['WDTV'].set_config(sickbeard.METADATA_WDTV)
@@ -2396,11 +2398,11 @@ class ConfigNotifications(MainHandler):
         return _munge(t)
 
 
-    def saveNotifications(self, use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None,
-                          xbmc_notify_ondownload=None,
-                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
-                          xbmc_update_library=None, xbmc_update_full=None, xbmc_host=None, xbmc_username=None,
-                          xbmc_password=None,
+    def saveNotifications(self, use_kodi=None, kodi_always_on=None, kodi_notify_onsnatch=None,
+                          kodi_notify_ondownload=None,
+                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None,
+                          kodi_update_library=None, kodi_update_full=None, kodi_host=None, kodi_username=None,
+                          kodi_password=None,
                           use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
                           plex_notify_onsubtitledownload=None, plex_update_library=None,
                           plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
@@ -2443,17 +2445,17 @@ class ConfigNotifications(MainHandler):
 
         results = []
 
-        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
-        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
-        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
-        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
-        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
-        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
-        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
-        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
-        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
-        sickbeard.XBMC_USERNAME = xbmc_username
-        sickbeard.XBMC_PASSWORD = xbmc_password
+        sickbeard.USE_KODI = config.checkbox_to_value(use_kodi)
+        sickbeard.KODI_ALWAYS_ON = config.checkbox_to_value(kodi_always_on)
+        sickbeard.KODI_NOTIFY_ONSNATCH = config.checkbox_to_value(kodi_notify_onsnatch)
+        sickbeard.KODI_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(kodi_notify_ondownload)
+        sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(kodi_notify_onsubtitledownload)
+        sickbeard.KODI_UPDATE_LIBRARY = config.checkbox_to_value(kodi_update_library)
+        sickbeard.KODI_UPDATE_FULL = config.checkbox_to_value(kodi_update_full)
+        sickbeard.KODI_UPDATE_ONLYFIRST = config.checkbox_to_value(kodi_update_onlyfirst)
+        sickbeard.KODI_HOST = config.clean_hosts(kodi_host)
+        sickbeard.KODI_USERNAME = kodi_username
+        sickbeard.KODI_PASSWORD = kodi_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)
@@ -2708,8 +2710,8 @@ class Config(MainHandler):
     anime = ConfigAnime
 
 
-def haveXBMC():
-    return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
+def haveKODI():
+    return sickbeard.USE_KODI and sickbeard.KODI_UPDATE_LIBRARY
 
 
 def havePLEX():
@@ -2729,7 +2731,7 @@ def HomeMenu():
     return [
         {'title': 'Add Shows', 'path': 'home/addShows/', },
         {'title': 'Manual Post-Processing', 'path': 'home/postprocess/'},
-        {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': haveXBMC},
+        {'title': 'Update KODI', 'path': 'home/updateKODI/', 'requires': haveKODI},
         {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': havePLEX},
         {'title': 'Manage Torrents', 'path': 'manage/manageTorrents', 'requires': haveTORRENT},
         {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
@@ -2876,7 +2878,7 @@ class NewHomeAddShows(MainHandler):
                         cur_path),
                 }
 
-                # see if the folder is in XBMC already
+                # see if the folder is in KODI already
                 dirResults = myDB.select("SELECT * FROM tv_shows WHERE location = ?", [cur_path])
 
                 if dirResults:
@@ -2934,7 +2936,8 @@ class NewHomeAddShows(MainHandler):
         if not show_dir:
             t.default_show_name = ''
         elif not show_name:
-            t.default_show_name = re.sub(' \(\d{4}\)','', ek.ek(os.path.basename, ek.ek(os.path.normpath, show_dir)).replace('.', ' '))
+            t.default_show_name = re.sub(' \(\d{4}\)', '',
+                                         ek.ek(os.path.basename, ek.ek(os.path.normpath, show_dir)).replace('.', ' '))
         else:
             t.default_show_name = show_name
 
@@ -2969,16 +2972,22 @@ class NewHomeAddShows(MainHandler):
         final_results = []
 
         logger.log(u"Getting recommended shows from Trakt.tv", logger.DEBUG)
-        recommendedlist = TraktCall("recommendations/shows.json/%API%", sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME,
-                                    sickbeard.TRAKT_PASSWORD)
 
-        if recommendedlist:
-            indexers = ['tvdb_id', 'tvrage_id']
-            map(final_results.append, (
-                [int(show[indexers[sickbeard.TRAKT_DEFAULT_INDEXER - 1]]), show['url'], show['title'], show['overview'],
-                 datetime.date.fromtimestamp(int(show['first_aired']) / 1000.0).strftime('%Y%m%d')]
-                for show in recommendedlist if not helpers.findCertainShow(sickbeard.showList, [
-                int(show[indexers[sickbeard.TRAKT_DEFAULT_INDEXER - 1]])])))
+        trakt_api = TraktAPI(sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+
+        try:
+            recommendedlist = trakt_api.traktRequest("recommendations/shows.json/%APIKEY%")
+
+            if recommendedlist:
+                indexers = ['tvdb_id', 'tvrage_id']
+                map(final_results.append, (
+                    [int(show[indexers[sickbeard.TRAKT_DEFAULT_INDEXER - 1]]), show['url'], show['title'],
+                     show['overview'],
+                     datetime.date.fromtimestamp(int(show['first_aired']) / 1000.0).strftime('%Y%m%d')]
+                    for show in recommendedlist if not helpers.findCertainShow(sickbeard.showList, [
+                    int(show[indexers[sickbeard.TRAKT_DEFAULT_INDEXER - 1]])])))
+        except (traktException, traktAuthException, traktServerBusy) as e:
+            logger.log(u"Could not connect to Trakt service: %s" % e.message, logger.WARNING)
 
         return json.dumps({'results': final_results})
 
@@ -3009,14 +3018,20 @@ class NewHomeAddShows(MainHandler):
 
         t.trending_shows = []
 
-        trending_shows = TraktCall("shows/trending.json/%API%", sickbeard.TRAKT_API_KEY)
-        if trending_shows:
-            for show in trending_shows:
-                try:
-                    if not helpers.findCertainShow(sickbeard.showList, [int(show['tvdb_id']), int(show['tvrage_id'])]):
-                        t.trending_shows += [show]
-                except exceptions.MultipleShowObjectsException:
-                    continue
+        trakt_api = TraktAPI(sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+
+        try:
+            trending_shows = trakt_api.traktRequest("shows/trending.json/%APIKEY%")
+
+            if trending_shows:
+                for show in trending_shows:
+                    try:
+                        if not helpers.findCertainShow(sickbeard.showList, [int(show['tvdb_id']), int(show['tvrage_id'])]):
+                            t.trending_shows += [show]
+                    except exceptions.MultipleShowObjectsException:
+                        continue
+        except (traktException, traktAuthException, traktServerBusy) as e:
+            logger.log(u"Could not connect to Trakt service: %s" % e.message, logger.WARNING)
 
         return _munge(t)
 
@@ -3479,17 +3494,17 @@ class Home(MainHandler):
             return "Error sending tweet"
 
 
-    def testXBMC(self, host=None, username=None, password=None):
+    def testKODI(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_hosts(host)
         finalResult = ''
         for curHost in [x.strip() for x in host.split(",")]:
-            curResult = notifiers.xbmc_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
+            curResult = notifiers.kodi_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
             if len(curResult.split(":")) > 2 and 'OK' in curResult.split(":")[2]:
-                finalResult += "Test XBMC notice sent successfully to " + urllib.unquote_plus(curHost)
+                finalResult += "Test KODI notice sent successfully to " + urllib.unquote_plus(curHost)
             else:
-                finalResult += "Test XBMC notice failed to " + urllib.unquote_plus(curHost)
+                finalResult += "Test KODI notice failed to " + urllib.unquote_plus(curHost)
             finalResult += "<br />\n"
 
         return finalResult
@@ -3745,9 +3760,9 @@ class Home(MainHandler):
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1' % showObj.indexerid})
-                t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
-                                      showObj.name.encode('utf-8')), 'requires': haveXBMC})
+                t.submenu.append({'title': 'Update show in KODI',
+                                  'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
+                                      showObj.name.encode('utf-8')), 'requires': haveKODI})
                 t.submenu.append({'title': 'Preview Rename', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
@@ -4167,19 +4182,19 @@ class Home(MainHandler):
         redirect("/home/displayShow?show=" + str(showObj.indexerid))
 
 
-    def updateXBMC(self, showName=None):
+    def updateKODI(self, showName=None):
 
-        # only send update to first host in the list -- workaround for xbmc sql backend users
-        if sickbeard.XBMC_UPDATE_ONLYFIRST:
-            # only send update to first host in the list -- workaround for xbmc sql backend users
-            host = sickbeard.XBMC_HOST.split(",")[0].strip()
+        # only send update to first host in the list -- workaround for kodi sql backend users
+        if sickbeard.KODI_UPDATE_ONLYFIRST:
+            # only send update to first host in the list -- workaround for kodi sql backend users
+            host = sickbeard.KODI_HOST.split(",")[0].strip()
         else:
-            host = sickbeard.XBMC_HOST
+            host = sickbeard.KODI_HOST
 
-        if notifiers.xbmc_notifier.update_library(showName=showName):
-            ui.notifications.message("Library update command sent to XBMC host(s): " + host)
+        if notifiers.kodi_notifier.update_library(showName=showName):
+            ui.notifications.message("Library update command sent to KODI host(s): " + host)
         else:
-            ui.notifications.error("Unable to contact one or more XBMC host(s): " + host)
+            ui.notifications.error("Unable to contact one or more KODI host(s): " + host)
         redirect('/home/')
 
 
