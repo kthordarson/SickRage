@@ -171,27 +171,41 @@ class deilduProvider(generic.TorrentProvider):
 
                 logger.log(u"DEBUG deildu.py _doSearch .. " + str(self.urls['search']) + " " + str(self.categorie) + " " + str(search_string))
                 searchURL = self.urls['search'] % (search_string, "&sort=seeders&type=desc&cat=0")
+#                boturl = 'http://icetracker.org/bot.php?sort=seeders&type=desc'
+                searchURLbot = 'http://icetracker.org/bot.php?search=%s%s' % (search_string, "&sort=seeders&type=desc&cat=0")
 
                 logger.log(u"DEILDU Search string URL: " + searchURL)
+                logger.log(u"DEILDU Search string URLbot: " + searchURLbot)
                 search_string = oldstring
                 data = self.getURL(searchURL)
                 if not data:
                     return []
+                databot = self.getURL(searchURLbot)
+                htmlbot = data.decode('cp1252')
+                htmlbot = BeautifulSoup(databot)
                 html = data.decode('cp1252')
                 html = BeautifulSoup(data)
 
                 try:
-                    if html.find(text='Nothing found!'):
+                    if html.find(text='Nothing found!') and htmlbot.find(text='Nothing found!'):
                         logger.log(u"DEILDU : nothing found : No results found for: " + search_string + "(" + searchURL + ")")
-                        return []
+#                        return []
 
                     result_table = html.find('table', attrs = {'class' : 'torrentlist'})
-
+                    result_tablebot = htmlbot.find('table', attrs = {'class' : 'torrentlist'})
+                    if result_tablebot:
+                        logger.log(u"DEILDU appending bot stuff")
+                        result_table.append(result_tablebot)
                     if not result_table:
                         logger.log(u"DEILDU : no result table : No results found for: " + search_string + "(" + searchURL + ")")
                         return []
 
                     entries = result_table.find_all('tr')
+#                    entriesbot = result_tablebot.find_all('tr')
+#                    entries = entries.append(entriesbot)
+                    if not entries:
+                        logger.log(u"DEILDU : nothing to find or do -- return")
+                        return []
 
                     for result in entries[1:]:
                         torrent = result.find_all('td')[1].find('a').find('b').string
