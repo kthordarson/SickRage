@@ -571,9 +571,9 @@ class Tvdb:
                         "https": self.config['proxy'],
                     }
 
-                resp = session.get(url, cache_auto=True, params=params)
+                resp = session.get(url.strip(), cache_auto=True, params=params)
             else:
-                resp = requests.get(url, params=params)
+                resp = requests.get(url.strip(), params=params)
 
             resp.raise_for_status()
         except requests.exceptions.HTTPError, e:
@@ -619,7 +619,7 @@ class Tvdb:
                 raise tvdb_error("Bad zip file received from thetvdb.com, could not read it")
         else:
             try:
-                return xmltodict.parse(resp.content.strip(), postprocessor=process)
+                return xmltodict.parse(resp.content.decode('utf-8'), postprocessor=process)
             except:
                 return dict([(u'data', None)])
 
@@ -797,18 +797,20 @@ class Tvdb:
             return
 
         cur_actors = Actors()
-        for curActorItem in actorsEt["actor"]:
+        for cur_actor in actorsEt['actor']:
             curActor = Actor()
-            for k, v in curActorItem.items():
+            for k, v in cur_actor.items():
+                if k is None or v is None:
+                    continue
+
                 k = k.lower()
-                if v is not None:
-                    if k == "image":
-                        v = self.config['url_artworkPrefix'] % (v)
-                    else:
-                        v = self._cleanData(v)
+                if k == "image":
+                    v = self.config['url_artworkPrefix'] % (v)
+                else:
+                    v = self._cleanData(v)
+
                 curActor[k] = v
             cur_actors.append(curActor)
-
         self._setShowData(sid, '_actors', cur_actors)
 
     def _getShowData(self, sid, language, getEpInfo=False):

@@ -372,6 +372,8 @@ def minimax(val, default, low, high):
 def check_setting_int(config, cfg_name, item_name, def_val):
     try:
         my_val = int(config[cfg_name][item_name])
+        if str(my_val) == str(None):
+            raise
     except:
         my_val = def_val
         try:
@@ -389,6 +391,8 @@ def check_setting_int(config, cfg_name, item_name, def_val):
 def check_setting_float(config, cfg_name, item_name, def_val):
     try:
         my_val = float(config[cfg_name][item_name])
+        if str(my_val) == str(None):
+            raise
     except:
         my_val = def_val
         try:
@@ -404,7 +408,7 @@ def check_setting_float(config, cfg_name, item_name, def_val):
 ################################################################################
 # Check_setting_str                                                            #
 ################################################################################
-def check_setting_str(config, cfg_name, item_name, def_val, log=True):
+def check_setting_str(config, cfg_name, item_name, def_val, log=True, censor_log=False):
     # For passwords you must include the word `password` in the item_name and add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     if bool(item_name.find('password') + 1):
         log = False
@@ -414,6 +418,8 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
 
     try:
         my_val = helpers.decrypt(config[cfg_name][item_name], encryption_version)
+        if str(my_val) == str(None):
+            raise
     except:
         my_val = def_val
         try:
@@ -421,6 +427,9 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
         except:
             config[cfg_name] = {}
             config[cfg_name][item_name] = helpers.encrypt(my_val, encryption_version)
+
+    if censor_log or (cfg_name, item_name) in logger.censoredItems.items():
+        logger.censoredItems[cfg_name, item_name] = my_val
 
     if log:
         logger.log(item_name + " -> " + str(my_val), logger.DEBUG)

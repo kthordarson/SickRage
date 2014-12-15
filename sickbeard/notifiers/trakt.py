@@ -18,7 +18,7 @@
 
 import sickbeard
 from sickbeard import logger
-
+from sickbeard.exceptions import ex
 from lib.trakt import TraktAPI
 from lib.trakt.exceptions import traktException, traktServerBusy, traktAuthException
 
@@ -107,7 +107,7 @@ class TraktNotifier:
 
                                 trakt_api.traktRequest("show/episode/unwatchlist/%APIKEY%", data_show)
             except (traktException, traktAuthException, traktServerBusy) as e:
-                logger.log(u"Could not connect to Trakt service: %s" % e.message, logger.WARNING)
+                logger.log(u"Could not connect to Trakt service: %s" % ex(e), logger.WARNING)
 
     def test_notify(self, api, username, password):
         """
@@ -121,12 +121,14 @@ class TraktNotifier:
         Returns: True if the request succeeded, False otherwise
         """
 
-        trakt_api = TraktAPI(sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+        trakt_api = TraktAPI(api, username, password)
 
         try:
             if trakt_api.validateAccount():
-                return True
+                return "Test notice sent successfully to Trakt"
         except (traktException, traktAuthException, traktServerBusy) as e:
-            logger.log(u"Could not connect to Trakt service: %s" % e.message, logger.WARNING)
+            logger.log(u"Could not connect to Trakt service: %s" % ex(e), logger.WARNING)
+
+        return "Test notice failed to Trakt: %s" % ex(e)
 
 notifier = TraktNotifier
