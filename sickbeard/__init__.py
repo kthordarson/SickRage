@@ -762,19 +762,18 @@ def initialize(consoleLogging=True):
         NEWZBIN_USERNAME = check_setting_str(CFG, 'Newzbin', 'newzbin_username', '', censor_log=True)
         NEWZBIN_PASSWORD = check_setting_str(CFG, 'Newzbin', 'newzbin_password', '', censor_log=True)
 
-<<<<<<< HEAD
-#        deildu = bool(check_setting_int(CFG, 'deildu', 'deildu', 0))
-#        deildu_USERNAME = check_setting_str(CFG, 'deildu', 'deildu_username', '')
-#        deildu_PASSWORD = check_setting_str(CFG, 'deildu', 'deildu_password', '')
+        deildu = bool(check_setting_int(CFG, 'deildu', 'deildu', 0))
+        deildu_USERNAME = check_setting_str(CFG, 'deildu', 'deildu_username', '', censor_log=True)
+        deildu_PASSWORD = check_setting_str(CFG, 'deildu', 'deildu_password', '', censor_log=True)
 
-        SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
-        SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
-        SAB_APIKEY = check_setting_str(CFG, 'SABnzbd', 'sab_apikey', '')
-=======
+#        SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
+#        SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
+#        SAB_APIKEY = check_setting_str(CFG, 'SABnzbd', 'sab_apikey', '')
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '', censor_log=True)
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '', censor_log=True)
         SAB_APIKEY = check_setting_str(CFG, 'SABnzbd', 'sab_apikey', '', censor_log=True)
->>>>>>> sickragetv/develop
+
+
         SAB_CATEGORY = check_setting_str(CFG, 'SABnzbd', 'sab_category', 'tv')
         SAB_CATEGORY_ANIME = check_setting_str(CFG, 'SABnzbd', 'sab_category_anime', 'anime')
         SAB_HOST = check_setting_str(CFG, 'SABnzbd', 'sab_host', '')
