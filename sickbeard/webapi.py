@@ -79,6 +79,10 @@ class ApiHandler(RequestHandler):
 
     def get(self, *args, **kwargs):
         kwargs = self.request.arguments
+        for arg, value in kwargs.items():
+            if len(value) == 1:
+                kwargs[arg] = value[0]
+
         args = args[1:]
 
         # set the output callback
@@ -159,7 +163,8 @@ class ApiHandler(RequestHandler):
             del kwargs["cmd"]
 
         outDict = {}
-        if cmds != None:
+        if cmds is not None:
+            cmds = cmds.split("|")
             multiCmds = bool(len(cmds) > 1)
             for cmd in cmds:
                 curArgs, curKwargs = self.filter_params(cmd, args, kwargs)
@@ -1278,8 +1283,8 @@ class CMD_Logs(ApiCall):
         minLevel = logger.reverseNames[str(self.min_level).upper()]
 
         data = []
-        if os.path.isfile(logger.sb_log_instance.log_file_path):
-            with ek.ek(open, logger.sb_log_instance.log_file_path) as f:
+        if os.path.isfile(logger.logFile):
+            with ek.ek(open, logger.logFile) as f:
                 data = f.readlines()
 
         regex = "^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$"
