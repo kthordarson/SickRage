@@ -155,11 +155,11 @@ class BaseHandler(RequestHandler):
         # handle 404 http errors
         if status_code == 404:
             url = self.request.uri
-            if self.request.uri.startswith(sickbeard.WEB_ROOT):
+            if sickbeard.WEB_ROOT and self.request.uri.startswith(sickbeard.WEB_ROOT):
                 url = url[len(sickbeard.WEB_ROOT) + 1:]
 
             if url[:3] != 'api':
-                return self.redirect(url)
+                return self.redirect('/')
             else:
                 self.finish('Wrong API key used')
 
@@ -180,9 +180,9 @@ class BaseHandler(RequestHandler):
                                     <p>%s</p>
                                     <h2>Request Info</h2>
                                     <p>%s</p>
+                                    <button onclick="window.location='%s/errorlogs/';">View Log(Errors)</button>
                                  </body>
-                               </html>""" % (error, error,
-                                             trace_info, request_info))
+                               </html>""" % (error, error, trace_info, request_info, sickbeard.WEB_ROOT))
 
     def redirect(self, url, permanent=False, status=None):
         if not url.startswith(sickbeard.WEB_ROOT):
@@ -200,8 +200,8 @@ class BaseHandler(RequestHandler):
 class WebHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super(WebHandler, self).__init__(*args, **kwargs)
+        self.io_loop = IOLoop.current()
 
-    io_loop = IOLoop.current()
     executor = ThreadPoolExecutor(50)
 
     @coroutine
@@ -216,7 +216,7 @@ class WebHandler(BaseHandler):
             # process request async
             self.async_call(method, callback=self.async_done)
         except:
-            logger.log('Failed doing webui request "%s": %s' % (route, traceback.format_exc()), logger.ERROR)
+            logger.log('Failed doing webui request "%s": %s' % (route, traceback.format_exc()), logger.DEBUG)
             raise HTTPError(404)
 
     @run_on_executor
@@ -243,14 +243,12 @@ class WebHandler(BaseHandler):
             logger.log('Failed sending webui reponse: %s' % (traceback.format_exc()), logger.DEBUG)
             raise
 
+
     # post uses get method
     post = get
 
 
 class LoginHandler(BaseHandler):
-    def __init__(self, *args, **kwargs):
-        super(LoginHandler, self).__init__(*args, **kwargs)
-
     def get(self, *args, **kwargs):
         if self.get_current_user():
             self.redirect('/home/')
@@ -277,15 +275,11 @@ class LoginHandler(BaseHandler):
 
 
 class LogoutHandler(BaseHandler):
-    def __init__(self, *args, **kwargs):
-        super(LogoutHandler, self).__init__(*args, **kwargs)
-
     def get(self, *args, **kwargs):
         self.clear_cookie("user")
         self.redirect('/login/')
 
-
-class KeyHandler(BaseHandler):
+class KeyHandler(RequestHandler):
     def __init__(self, *args, **kwargs):
         super(KeyHandler, self).__init__(*args, **kwargs)
 
@@ -1778,9 +1772,6 @@ class Home(WebRoot):
     # Possible status: Downloaded, Snatched, etc...
     # Returns {'show': 279530, 'episodes' : ['episode' : 6, 'season' : 1, 'searchstatus' : 'queued', 'status' : 'running', 'quality': '4013']
     def getManualSearchStatus(self, show=None, season=None):
-
-        episodes = []
-
         def getEpisodes(searchThread, searchstatus):
             results = []
 
@@ -1802,33 +1793,36 @@ class Home(WebRoot):
 
             return results
 
+        episodes = []
+
         # Queued Searches
+        searchstatus = 'queued'
         for searchThread in sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show):
-            episodes += getEpisodes(searchThread, 'queued')
+            episodes += getEpisodes(searchThread, searchstatus)
 
         # Running Searches
+        searchstatus = 'searching'
         if (sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()):
             searchThread = sickbeard.searchQueueScheduler.action.currentItem
+
             if searchThread.success:
                 searchstatus = 'finished'
-            else:
-                searchstatus = 'searching'
+
             episodes += getEpisodes(searchThread, searchstatus)
 
         # Finished Searches
+        searchstatus = 'finished'
         for searchThread in sickbeard.search_queue.MANUAL_SEARCH_HISTORY:
+            if not str(searchThread.show.indexerid) == show:
+                continue
+
             if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                if str(searchThread.show.indexerid) == show and not [x for x in episodes if x[
-                    'episodeindexid'] == searchThread.segment.indexerid]:
-                    searchstatus = 'finished'
+                if not [x for x in episodes if x['episodeindexid'] == searchThread.segment.indexerid]:
                     episodes += getEpisodes(searchThread, searchstatus)
             else:
                 ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
-                if str(searchThread.show.indexerid) == show:
-                    for epObj in searchThread.segment:
-                        if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                            searchstatus = 'finished'
-                            episodes += getEpisodes(searchThread, searchstatus)
+                if not [i for i, j in zip(searchThread.segment, episodes) if i.indexerid == j['episodeindexid']]:
+                    episodes += getEpisodes(searchThread, searchstatus)
 
         return json.dumps({'show': show, 'episodes': episodes})
 
@@ -2207,10 +2201,10 @@ class HomeAddShows(Home):
 
         logger.log(u"Getting recommended shows from Trakt.tv", logger.DEBUG)
 
-        trakt_api = TraktAPI(sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+        trakt_api = TraktAPI(sickbeard.TRAKT_API_KEY, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
 
         try:
-            recommendedlist = trakt_api.traktRequest("recommendations/shows.json/%APIKEY%")
+            recommendedlist = trakt_api.traktRequest("recommendations/shows.json/%APIKEY%", method='POST')
 
             if recommendedlist:
                 indexers = ['tvdb_id', 'tvrage_id']
@@ -2262,7 +2256,7 @@ class HomeAddShows(Home):
 
         t.trending_shows = []
 
-        trakt_api = TraktAPI(sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+        trakt_api = TraktAPI(sickbeard.TRAKT_API_KEY, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
 
         try:
             shows = trakt_api.traktRequest("shows/trending.json/%APIKEY%") or []
@@ -3431,13 +3425,14 @@ class ConfigGeneral(Config):
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
                     update_shows_on_start=None, trash_remove_show=None, trash_rotate_logs=None, update_frequency=None,
                     launch_browser=None, web_username=None,
-                    use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None,
+                    api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
                     handle_reverse_proxy=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None,
                     calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, play_videos=None, rootDir=None, theme_name=None):
+                    indexer_timeout=None, play_videos=None, rootDir=None, theme_name=None,
+                    git_reset=None, git_username=None, git_password=None, git_autoissues=None):
 
         results = []
 
@@ -3459,6 +3454,10 @@ class ConfigGeneral(Config):
         sickbeard.ANON_REDIRECT = anon_redirect
         sickbeard.PROXY_SETTING = proxy_setting
         sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
+        sickbeard.GIT_USERNAME = git_username
+        sickbeard.GIT_PASSWORD = git_password
+        sickbeard.GIT_RESET = config.checkbox_to_value(git_reset)
+        sickbeard.GIT_AUTOISSUES = config.checkbox_to_value(git_autoissues)
         sickbeard.GIT_PATH = git_path
         sickbeard.GIT_REMOTE = git_remote
         sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
@@ -3493,7 +3492,6 @@ class ConfigGeneral(Config):
         if not config.change_LOG_DIR(log_dir, web_log):
             results += ["Unable to create directory " + os.path.normpath(log_dir) + ", log directory not changed."]
 
-        sickbeard.USE_API = config.checkbox_to_value(use_api)
         sickbeard.API_KEY = api_key
 
         sickbeard.ENABLE_HTTPS = config.checkbox_to_value(enable_https)
@@ -4637,7 +4635,7 @@ class ErrorLogs(WebRoot):
     def ErrorLogsMenu(self):
         menu = [
             {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},
-            # { 'title': 'View Log',  'path': 'errorlogs/viewlog'  },
+            {'title': 'Submit Errors', 'path': 'errorlogs/submit_errors/', 'requires': self.haveErrors},
         ]
 
         return menu
@@ -4649,11 +4647,13 @@ class ErrorLogs(WebRoot):
 
         return t.respond()
 
+    def haveErrors(self):
+        if len(classes.ErrorViewer.errors) > 0:
+            return True
 
     def clearerrors(self):
         classes.ErrorViewer.clear()
         return self.redirect("/errorlogs/")
-
 
     def viewlog(self, minLevel=logger.INFO, maxLines=500):
 
@@ -4707,3 +4707,13 @@ class ErrorLogs(WebRoot):
         t.minLevel = minLevel
 
         return t.respond()
+
+    def submit_errors(self):
+        if not (sickbeard.GIT_USERNAME and sickbeard.GIT_PASSWORD):
+            logger.log(u'Please set your GitHub username and password in the config, unable to submit issue ticket to GitHub!')
+        else:
+            issue = logger.submit_errors()
+            if issue:
+                ui.notifications.message('Your issue ticket #%s was submitted successfully!' % issue.number)
+
+        return self.redirect("/errorlogs/")
