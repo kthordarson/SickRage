@@ -56,8 +56,8 @@ class deilduProvider(generic.TorrentProvider):
         self.ratio = None
 
         self.cache = deilduCache(self)
-        self.url = 'https://icetracker.org'
-        self.search_url = 'https://icetracker.org/browse.php?search=%s%s'
+        self.url = 'http://icetracker.org'
+        self.search_url = 'http://icetracker.org/browse.php?search=%s%s'
         self.rss_url = 'http://icetracker.org/rss.php'
         self.download_url = 'http://icetracker.org/details.php?id=%s'
         self.login = 'http://icetracker.org/takelogin.php'
@@ -97,9 +97,10 @@ class deilduProvider(generic.TorrentProvider):
                         }
 
         self.session = requests.Session()
-        logger.log(u"DEBUG deildu.py _doLogin running ..." + self.username + " " + self.password)
+        logger.log(u"deildu.py _doLogin running ..." + self.username + " " + self.password)
+        logger.log(u"deildu.py _doLogin -- " + self.login)
         try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30)
+            response = self.session.post(self.login, data=login_params, timeout=30)
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
             logger.log(u'Unable to connect to ' + self.name + ' provider: ' +ex(e), logger.ERROR)
             return False
@@ -169,8 +170,8 @@ class deilduProvider(generic.TorrentProvider):
                 search_string = search_string.replace('.', '+')
                 search_string = search_string.replace(' ', '+')
 
-                logger.log(u"DEBUG deildu.py _doSearch .. " + str(self.urls['search']) + " " + str(self.categorie) + " " + str(search_string))
-                searchURL = self.urls['search'] % (search_string, "&sort=seeders&type=desc&cat=0")
+                logger.log(u"DEBUG deildu.py _doSearch .. " + str(self.search_url) + " " + str(self.categorie) + " " + str(search_string))
+                searchURL = self.search_url % (search_string, "&sort=seeders&type=desc&cat=0")
 #                boturl = 'http://icetracker.org/bot.php?sort=seeders&type=desc'
                 searchURLbot = 'http://icetracker.org/bot.php?search=%s%s' % (search_string, "&sort=seeders&type=desc&cat=0")
 
@@ -199,8 +200,9 @@ class deilduProvider(generic.TorrentProvider):
                     if not result_table:
                         logger.log(u"DEILDU : no result table : No results found for: " + search_string + "(" + searchURL + ")")
                         return []
-
+                    logger.log(u"DEILDU building entries tables ... ")
                     entries = result_table.find_all('tr')
+                    logger.log(u"DEILDU building entries tables ... done...")
 #                    entriesbot = result_tablebot.find_all('tr')
 #                    entries = entries.append(entriesbot)
                     if not entries:
@@ -210,11 +212,12 @@ class deilduProvider(generic.TorrentProvider):
                     for result in entries[1:]:
                         torrent = result.find_all('td')[1].find('a').find('b').string
                         torrent_name = torrent.string
-                        torrent_detail_url = self.urls['base_url'] + (result.find_all('td')[3].find('a'))['href']
-                        torrent_download_url = self.urls['base_url'] + (result.find_all('td')[2].find('a'))['href']
+                        torrent_detail_url = self.url + (result.find_all('td')[3].find('a'))['href']
+                        torrent_download_url = self.url + (result.find_all('td')[2].find('a'))['href']
                         try:
                             torrent_seeders = int((result.find_all('td')[8].find('b').string))
                         except:
+                            logger.log(u"DEILDU no seeders found " + torrent_name)
                             torrent_seeders = 0
 #                        torrent = result.find_all('td').find('a')
 #                        torrent_id = int(torrent['href'].replace('/details.php?id=', ''))
@@ -229,10 +232,15 @@ class deilduProvider(generic.TorrentProvider):
                         or not show_name_helpers.filterBadReleases(torrent_name):
                             continue
 
-                        item = torrent, torrent_download_url
+#                        item = torrent, torrent_download_url
 #                        item = torrent_name, torrent_download_url, torrent_id, torrent_seeders, torrent_leechers
-                        logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + searchURL)
-                        items[mode].append(item)
+#                        logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + searchURL)
+                        try:
+                            item = torrent, torrent_download_url
+                            items[mode].append(item)
+                            logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + searchURL)
+                        except:
+                            logger.log(u"DEILDU could not apppend....")
                         logger.log(u"DEBUG deildu.py appended to items....")
 
                 except Exception, e:
