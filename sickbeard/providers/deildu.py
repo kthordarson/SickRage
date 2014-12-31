@@ -157,8 +157,8 @@ class deilduProvider(generic.TorrentProvider):
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        items = {'Season': [], 'Episode': []}
-
+#        items = {'Season': [], 'Episode': []}
+        items = {'Season': [], 'Episode': [], 'RSS': []}
         if not self._doLogin():
             return
 
@@ -314,5 +314,11 @@ class deilduCache(tvcache.TVCache):
         title = unicode(title)
 #        url = unicode(url)
         self._addCacheEntry(title, url)
+
+    def _getRSSData(self):
+        logger.log(u"deildu getrssdata")
+        search_params = {'RSS': ['rss']}
+        return {'entries': self.provider._doSearch(search_params)}
+
 
 provider = deilduProvider()
