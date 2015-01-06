@@ -56,7 +56,7 @@ class deilduProvider(generic.TorrentProvider):
         self.ratio = None
 
         self.cache = deilduCache(self)
-        self.url = 'http://icetracker.org'
+        self.url = 'http://icetracker.org/'
         self.search_url = 'http://icetracker.org/browse.php?search=%s%s'
         self.rss_url = 'http://icetracker.org/rss.php'
         self.download_url = 'http://icetracker.org/details.php?id=%s'
@@ -208,9 +208,15 @@ class deilduProvider(generic.TorrentProvider):
                     if not entries:
                         logger.log(u"DEILDU : nothing to find or do -- return")
                         return []
+                    try:
+                        logger.log(u"deildu result parsing starting .... search string is " + search_string + " search url is " + searchURL)
+                    except:
+                        logger.log(u"deildu result parsing rugl....")
 
                     for result in entries[1:]:
+                        logger.log(u"deildu working in result and entries ... ")
                         torrent = result.find_all('td')[1].find('a').find('b').string
+                        logger.log(u"deildu working in result and entries torrent... " + torrent)
                         torrent_name = torrent.string
                         torrent_detail_url = self.url + (result.find_all('td')[3].find('a'))['href']
                         torrent_download_url = self.url + (result.find_all('td')[2].find('a'))['href']
@@ -239,10 +245,11 @@ class deilduProvider(generic.TorrentProvider):
                             item = torrent, torrent_download_url
                             items[mode].append(item)
                             logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + searchURL)
+                            logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + torrent_download_url)
                         except:
                             logger.log(u"DEILDU could not apppend....")
-                        logger.log(u"DEBUG deildu.py appended to items....")
-
+                        logger.log(u"DEBUG deildu.py appended to items...." + torrent_name + " url " + searchURL)
+                        logger.log(u"DEBUG deildu.py appended to items ... : " + torrent_name + " url " + torrent_download_url)
                 except Exception, e:
                     logger.log(u"DEBUG deildu.py Failed to parsing " + self.name + " page url: " + searchURL + " " + ex(e))
 

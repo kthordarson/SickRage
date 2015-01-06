@@ -151,11 +151,11 @@ class TVCache():
         title, url = self._get_title_and_url(item)
 
         self._checkItemAuth(title, url)
-
+        logger.log(u"tvcache.py running parseitem for url " + url)
         if title and url:
             title = self._translateTitle(title)
             url = self._translateLinkURL(url)
-
+            logger.log(u"tvcache.py url is now " + url)
             logger.log(u"Attempting to add item to cache: " + title, logger.DEBUG)
             return self._addCacheEntry(title, url)
 

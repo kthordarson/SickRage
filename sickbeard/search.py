@@ -204,6 +204,7 @@ def pickBestResult(results, show=None, quality_list=None):
         if cur_result.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
             if not cur_result.url.startswith('magnet'):
                 cur_result.content = cur_result.provider.getURL(cur_result.url)
+                logger.log(u"search_queue.py running pickbestresult for url " + cur_result.url)
                 if not cur_result.content:
                     continue
 
