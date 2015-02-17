@@ -21,6 +21,7 @@ __all__ = ['ezrss',
            'womble',
            'btn',
            'thepiratebay',
+           'oldpiratebay',
            'kat',
            'torrentleech',
            'scc',
@@ -40,6 +41,7 @@ __all__ = ['ezrss',
            'bitsoup',
            't411',
            'tokyotoshokan',
+           'shazbat',
 ]
 
 import sickbeard
