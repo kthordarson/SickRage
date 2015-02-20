@@ -111,7 +111,7 @@ class Logger(object):
 
         # rotating log file handler
         if self.fileLogging:
-            rfh = logging.handlers.RotatingFileHandler(self.logFile, maxBytes=1024 * 1024, backupCount=5, encoding='utf-8')
+            rfh = logging.handlers.RotatingFileHandler(self.logFile, maxBytes=sickbeard.LOG_SIZE, backupCount=sickbeard.LOG_NR, encoding='utf-8')
             rfh.setFormatter(CensoredFormatter('%(asctime)s %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S'))
             rfh.setLevel(DEBUG)
 
@@ -171,8 +171,9 @@ class Logger(object):
                     if match:
                         level = match.group(2)
                         if reverseNames[level] == ERROR:
-                            paste_data = "".join(log_data[i:50])
-                            gist = gh.get_user().create_gist(True, {"sickrage.log": InputFileContent(paste_data)})
+                            paste_data = "".join(log_data[i:i+50])
+                            if paste_data:
+                                gist = gh.get_user().create_gist(True, {"sickrage.log": InputFileContent(paste_data)})
                             break
 
                 message = u"### INFO\n"
@@ -189,7 +190,7 @@ class Logger(object):
                 message += u"---\n"
                 message += u"_STAFF NOTIFIED_: @SiCKRAGETV/owners @SiCKRAGETV/moderators"
 
-                issue = gh.get_organization(gh_org).get_repo(gh_repo).create_issue("[APP SUBMITTED]: " + curError.title, message)
+                issue = gh.get_organization(gh_org).get_repo(gh_repo).create_issue("[APP SUBMITTED]: " + str(curError.title), message)
                 if issue:
                     self.log('Your issue ticket #%s was submitted successfully!' % issue.number)
 
