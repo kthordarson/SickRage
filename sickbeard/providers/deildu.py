@@ -43,18 +43,12 @@ class deilduProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-#
-#        'search': 'http://deildu.net/browse.php?search=%s%s&sort=seeders&type=desc&cat=0',
-
         generic.TorrentProvider.__init__(self, "deildu")
-
         self.supportsBacklog = True
-
         self.enabled = False
         self.username = None
         self.password = None
         self.ratio = None
-
         self.cache = deilduCache(self)
         self.url = 'http://icetracker.org'
         self.search_url = 'http://icetracker.org/browse.php?search=%s%s'
@@ -62,19 +56,8 @@ class deilduProvider(generic.TorrentProvider):
         self.download_url = 'http://icetracker.org/details.php?id=%s'
         self.login = 'http://icetracker.org/takelogin.php'
         self.headers = {
-        # Using USER_AGENT instead of Mozilla to keep same user
-        # agent along authentication and download phases,
-        #otherwise session might be broken and download fail, asking again for authentication
-        #'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
-
- #       self.url = self.urls['base_url']
-
-
         self.session = None
-
-#        self.categories = 73
-
         self.categorie = ''
 
     def isEnabled(self):
@@ -157,12 +140,10 @@ class deilduProvider(generic.TorrentProvider):
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-#        items = {'Season': [], 'Episode': []}
         items = {'Season': [], 'Episode': [], 'RSS': []}
         if not self._doLogin():
             return
 
-#        freeleech = '&free=on' if sickbeard.deildu_FREELEECH else ''
         logger.log(u"DEBUG deildu.py _doSearch running...")
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -172,7 +153,6 @@ class deilduProvider(generic.TorrentProvider):
 
                 logger.log(u"DEBUG deildu.py _doSearch .. " + str(self.search_url) + " " + str(self.categorie) + " " + str(search_string))
                 searchURL = self.search_url % (search_string, "&sort=seeders&type=desc&cat=0")
-#                boturl = 'http://icetracker.org/bot.php?sort=seeders&type=desc'
                 searchURLbot = 'http://icetracker.org/bot.php?search=%s%s' % (search_string, "&sort=seeders&type=desc&cat=0")
 
                 logger.log(u"DEILDU Search string URL: " + searchURL)
@@ -203,8 +183,6 @@ class deilduProvider(generic.TorrentProvider):
                     logger.log(u"DEILDU building entries tables ... ")
                     entries = result_table.find_all('tr')
                     logger.log(u"DEILDU building entries tables ... done...")
-#                    entriesbot = result_tablebot.find_all('tr')
-#                    entries = entries.append(entriesbot)
                     if not entries:
                         logger.log(u"DEILDU : nothing to find or do -- return")
                         return []
@@ -219,22 +197,12 @@ class deilduProvider(generic.TorrentProvider):
                         except:
                             logger.log(u"DEILDU no seeders found " + torrent_name)
                             torrent_seeders = 0
-#                        torrent = result.find_all('td').find('a')
-#                        torrent_id = int(torrent['href'].replace('/details.php?id=', ''))
-#                        torrent_name = torrent.string
-#                        torrent_download_url = self.urls['download'] % (torrent_id, torrent_name.replace(' ', '.'))
-#                        torrent_details_url = self.urls['detail'] % (torrent_id)
-#                        torrent_seeders = int(result.find('td', attrs = {'class' : 'ac t_seeders'}).string)
-#                        torrent_leechers = int(result.find('td', attrs = {'class' : 'ac t_leechers'}).string)
 
                         #Filter unseeded torrent
                         if torrent_seeders == 0 or not torrent_name \
                         or not show_name_helpers.filterBadReleases(torrent_name):
                             continue
 
-#                        item = torrent, torrent_download_url
-#                        item = torrent_name, torrent_download_url, torrent_id, torrent_seeders, torrent_leechers
-#                        logger.log(u"DEBUG deildu.py Found result: " + torrent_name + " url " + searchURL)
                         try:
                             item = torrent, torrent_download_url
                             items[mode].append(item)
@@ -247,7 +215,6 @@ class deilduProvider(generic.TorrentProvider):
                     logger.log(u"DEBUG deildu.py Failed to parsing " + self.name + " page url: " + searchURL + " " + ex(e))
 
             #For each search mode sort all the items by seeders
-#            items[mode].sort(key=lambda tup: tup[3], reverse=True)
 
             results += items[mode]
             logger.log(u"DEBUG deildu.py results to items mode ... ")
@@ -262,17 +229,12 @@ class deilduProvider(generic.TorrentProvider):
             url = str(url).replace('&amp;','&')
             logger.log(u"DEBUG deildu.py : " + url )
         title = unicode(title)
-#        url = unicode(url)
         return (title, url)
 
-#    def getURL(self, url, headers=None):
     def getURL(self, url, post_data=None, params=None, timeout=30, json=False):
         logger.log(u"DEBUG deildu.py _getURL running: " + url)
         if not self.session:
             self._doLogin()
-
-#        if not headers:
-#            headers = []
 
         try:
             response = self.session.get(url)
@@ -280,8 +242,6 @@ class deilduProvider(generic.TorrentProvider):
             logger.log(u"Error loading "+self.name+" URL: " + ex(e), logger.ERROR)
             return None
         return helpers.getURL(url, post_data=post_data, params=params, headers=self.headers, timeout=timeout, session=self.session, json=json)
-
-#        return response.content
 
 class deilduCache(tvcache.TVCache):
 
@@ -294,7 +254,6 @@ class deilduCache(tvcache.TVCache):
 
     def _getData(self):
 
-#        url = self.provider.urls['search'] % (self.provider.categories, "", "")
         url = self.provider.urls['search'] % ('', '')
 
         logger.log(u"deildu cache update URL: "+ url)
@@ -312,7 +271,6 @@ class deilduCache(tvcache.TVCache):
 
         logger.log(u"Adding item to cache: "+title)
         title = unicode(title)
-#        url = unicode(url)
         self._addCacheEntry(title, url)
 
     def _getRSSData(self):
