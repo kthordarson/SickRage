@@ -221,6 +221,20 @@
                                 </label>
                             </div>
                             <div class="field-pair">
+                                <label for="plex_server_token">
+                                    <span class="component-title">Plex Media Server Auth Token</span>
+                                    <input type="text" name="plex_server_token" id="plex_server_token" value="$sickbeard.PLEX_SERVER_TOKEN" class="form-control input-sm input250" />
+                                </label>
+                                <label>
+                                    <span class="component-title">&nbsp;</span>
+                                    <span class="component-desc">Auth Token used by plex</span>
+                                </label>
+                                <label>
+                                    <span class="component-title">&nbsp;</span>
+                                    <span class="component-desc">(<a href="<%= anon_url('https://support.plex.tv/hc/en-us/articles/204059436-Finding-your-account-token-X-Plex-Token') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><u>Finding your account token</u></a>)</span>
+                                </label>
+                            </div>
+                            <div class="field-pair">
                                 <label for="plex_host">
                                     <span class="component-title">Plex Client IP:Port</span>
                                     <input type="text" name="plex_host" id="plex_host" value="$sickbeard.PLEX_HOST" class="form-control input-sm input350" />
@@ -1430,15 +1444,16 @@
                                 </label>
                             </div>
                             <div class="field-pair">
-                                <label for="trakt_use_watchlist">
-                                    <span class="component-title">Use watchlist:</span>
+                                <label for="trakt_sync_watchlist">
+                                    <span class="component-title">Sync watchlist:</span>
                                     <span class="component-desc">
-                                        <input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt_use_watchlist" #if $sickbeard.TRAKT_USE_WATCHLIST then "checked=\"checked\"" else ""# />
-                                        <p>get new shows from your trakt watchlist.</p>
+                                        <input type="checkbox" class="enabler" name="trakt_sync_watchlist" id="trakt_sync_watchlist" #if $sickbeard.TRAKT_SYNC_WATCHLIST then "checked=\"checked\"" else ""# />
+                                        <p>sync your SickRage show watchlist with your trakt show watchlist (either Show and Episode).</p>
+                                        <p>Episode will be added on watch list when wanted or snatched and will be removed when downloaded </p>
                                     </span>
                                 </label>
                             </div>
-                            <div id="content_trakt_use_watchlist">
+                            <div id="content_trakt_sync_watchlist">
                                 <div class="field-pair">
                                     <label for="trakt_method_add">
                                         <span class="component-title">Watchlist add method:</span>
