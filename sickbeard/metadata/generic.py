@@ -757,7 +757,7 @@ class GenericMetadata():
 
             lINDEXER_API_PARMS['banners'] = True
 
-            if indexer_lang and not indexer_lang == 'en':
+            if indexer_lang and not indexer_lang == sickbeard.INDEXER_DEFAULT_LANGUAGE:
                 lINDEXER_API_PARMS['language'] = indexer_lang
 
             if show_obj.dvdorder != 0:
@@ -767,7 +767,8 @@ class GenericMetadata():
             indexer_show_obj = t[show_obj.indexerid]
         except (sickbeard.indexer_error, IOError), e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
+                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.WARNING)
+            logger.log(u"Indexer " + sickbeard.indexerApi(show_obj.indexer).name + "maybe experiencing some problems. Try again later", logger.DEBUG)                
             return None
 
         if image_type not in ('fanart', 'poster', 'banner', 'poster_thumb', 'banner_thumb'):
@@ -826,7 +827,7 @@ class GenericMetadata():
 
             lINDEXER_API_PARMS['banners'] = True
 
-            if indexer_lang and not indexer_lang == 'en':
+            if indexer_lang and not indexer_lang == sickbeard.INDEXER_DEFAULT_LANGUAGE:
                 lINDEXER_API_PARMS['language'] = indexer_lang
 
             if show_obj.dvdorder != 0:
@@ -836,7 +837,8 @@ class GenericMetadata():
             indexer_show_obj = t[show_obj.indexerid]
         except (sickbeard.indexer_error, IOError), e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
+                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.WARNING)
+            logger.log(u"Indexer " + sickbeard.indexerApi(show_obj.indexer).name + "maybe experiencing some problems. Try again later", logger.DEBUG)
             return result
 
         # if we have no season banners then just finish
@@ -857,7 +859,7 @@ class GenericMetadata():
 
         # find the correct season in the TVDB and TVRAGE object and just copy the dict into our result dict
         for seasonArtID in seasonsArtObj.keys():
-            if int(seasonsArtObj[seasonArtID]['season']) == season and seasonsArtObj[seasonArtID]['language'] == 'en':
+            if int(seasonsArtObj[seasonArtID]['season']) == season and seasonsArtObj[seasonArtID]['language'] == sickbeard.INDEXER_DEFAULT_LANGUAGE:
                 result[season][seasonArtID] = seasonsArtObj[seasonArtID]['_bannerpath']
 
         return result
@@ -882,14 +884,15 @@ class GenericMetadata():
 
             lINDEXER_API_PARMS['banners'] = True
 
-            if indexer_lang and not indexer_lang == 'en':
+            if indexer_lang and not indexer_lang == sickbeard.INDEXER_DEFAULT_LANGUAGE:
                 lINDEXER_API_PARMS['language'] = indexer_lang
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
         except (sickbeard.indexer_error, IOError), e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
+                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.WARNING)
+            logger.log(u"Indexer " + sickbeard.indexerApi(show_obj.indexer).name + "maybe experiencing some problems. Try again later", logger.DEBUG)
             return result
 
         # if we have no season banners then just finish
@@ -911,7 +914,7 @@ class GenericMetadata():
 
         # find the correct season in the TVDB and TVRAGE object and just copy the dict into our result dict
         for seasonArtID in seasonsArtObj.keys():
-            if int(seasonsArtObj[seasonArtID]['season']) == season and seasonsArtObj[seasonArtID]['language'] == 'en':
+            if int(seasonsArtObj[seasonArtID]['season']) == season and seasonsArtObj[seasonArtID]['language'] == sickbeard.INDEXER_DEFAULT_LANGUAGE:
                 result[season][seasonArtID] = seasonsArtObj[seasonArtID]['_bannerpath']
 
         return result
@@ -948,11 +951,6 @@ class GenericMetadata():
 
             name = showXML.findtext('title')
 
-            try:
-                indexer = int(showXML.findtext('indexer'))
-            except:
-                indexer = None
-
             if showXML.findtext('tvdbid') != None:
                 indexer_id = int(showXML.findtext('tvdbid'))
             elif showXML.findtext('id') != None:
@@ -964,6 +962,18 @@ class GenericMetadata():
             if indexer_id is None:
                 logger.log(u"Invalid Indexer ID (" + str(indexer_id) + "), not using metadata file", logger.WARNING)
                 return empty_return
+
+            indexer = None
+            if showXML.findtext('indexer') != None:
+                indexer = int(showXML.findtext('indexer'))
+            elif showXML.find('episodeguide/url') != None:
+                epg_url = showXML.findtext('episodeguide/url').lower()
+                if str(indexer_id) in epg_url:
+                    if 'thetvdb.com' in epg_url:
+                        indexer = 1
+                    elif 'tvrage' in epg_url:
+                        indexer = 2
+
 
         except Exception, e:
             logger.log(

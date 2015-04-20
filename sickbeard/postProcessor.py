@@ -44,6 +44,7 @@ from sickbeard.exceptions import ex
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 from lib import adba
+from sickbeard.helpers import verify_freespace
 
 
 class PostProcessor(object):
@@ -182,10 +183,19 @@ class PostProcessor(object):
         # don't confuse glob with chars we didn't mean to use
         base_name = re.sub(r'[\[\]\*\?]', r'[\g<0>]', base_name)
         
-        if subfolders:
-            filelist = ek.ek(recursive_glob, self.folder_path,  base_name + '*')
-        else:
-            filelist = ek.ek(glob.glob, base_name + '*')
+        if subfolders: # subfolders are only checked in show folder, so names will always be exactly alike
+            filelist = ek.ek(recursive_glob, ek.ek(os.path.dirname, file_path),  base_name + '*') # just create the list of all files starting with the basename
+        else: # this is called when PP, so we need to do the filename check case-insensitive
+            filelist = []
+            checklist = ek.ek(glob.glob, ek.ek(os.path.join, ek.ek(os.path.dirname, file_path), '*')) # get a list of all the files in the folder
+            for filefound in checklist: # loop through all the files in the folder, and check if they are the same name even when the cases don't match
+                file_name = filefound.rpartition('.')[0]
+                if not base_name_only:
+                    file_name = file_name + '.'
+                if file_name.lower() == base_name.lower(): # if there's no difference in the filename add it to the filelist
+                    filelist.append(filefound) 
+             
+                             
         for associated_file_path in filelist:
             # only add associated to list
             if associated_file_path == file_path:
@@ -200,7 +210,12 @@ class PostProcessor(object):
 
             if ek.ek(os.path.isfile, associated_file_path):
                 file_path_list.append(associated_file_path)
-
+        
+        if file_path_list:
+            self._log(u"Found the following associated files: " + str(file_path_list), logger.DEBUG)
+        else:
+            self._log(u"No associated files were during this pass", logger.DEBUG)
+            
         return file_path_list
 
     def _delete(self, file_path, associated_files=False):
@@ -327,7 +342,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
                 self._log("Unable to move file " + cur_file_path + " to " + new_file_path + ": " + str(e), logger.ERROR)
-                raise e
+                raise
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_move,
                                       subtitles=subtitles)
@@ -348,7 +363,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
                 logger.log("Unable to copy file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
-                raise e
+                raise
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_copy,
                                       subtitles=subtitles)
@@ -370,7 +385,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
                 self._log("Unable to link file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
-                raise e
+                raise
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_hard_link)
 
@@ -390,7 +405,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
                 self._log("Unable to link file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
-                raise e
+                raise
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files,
                                       action=_int_move_and_sym_link)
@@ -588,19 +603,28 @@ class PostProcessor(object):
                     logger.DEBUG)
                 airdate = episodes[0].toordinal()
                 myDB = db.DBConnection()
+                # Ignore season 0 when searching for episode(Conflict between special and regular episode, same air date)
                 sql_result = myDB.select(
-                    "SELECT season, episode FROM tv_episodes WHERE showid = ? and indexer = ? and airdate = ?",
+                    "SELECT season, episode FROM tv_episodes WHERE showid = ? and indexer = ? and airdate = ? and season != 0",
                     [show.indexerid, show.indexer, airdate])
 
                 if sql_result:
                     season = int(sql_result[0][0])
                     episodes = [int(sql_result[0][1])]
                 else:
-                    self._log(u"Unable to find episode with date " + str(episodes[0]) + u" for show " + str(
+                    # Found no result, try with season 0
+                    sql_result = myDB.select(
+                        "SELECT season, episode FROM tv_episodes WHERE showid = ? and indexer = ? and airdate = ?",
+                        [show.indexerid, show.indexer, airdate])
+                    if sql_result:
+                        season = int(sql_result[0][0])
+                        episodes = [int(sql_result[0][1])]
+                    else:
+                        self._log(u"Unable to find episode with date " + str(episodes[0]) + u" for show " + str(
                         show.indexerid) + u", skipping", logger.DEBUG)
-                    # we don't want to leave dates in the episode list if we couldn't convert them to real episode numbers
-                    episodes = []
-                    continue
+                        # we don't want to leave dates in the episode list if we couldn't convert them to real episode numbers
+                        episodes = []
+                        continue
 
             # if there's no season then we can hopefully just use 1 automatically
             elif season == None and show:
@@ -761,13 +785,23 @@ class PostProcessor(object):
         if self.is_priority:
             return True
 
-        # if SB downloaded this on purpose then this is a priority download
-        if self.in_history or ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
-            self._log(u"SB snatched this episode so I'm marking it as priority", logger.DEBUG)
-            return True
-
         old_ep_status, old_ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
 
+        # if SB downloaded this on purpose we likely have a priority download
+        if self.in_history or ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+            # if the episode is still in a snatched status, then we can assume we want this
+            if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+                self._log(u"SB snatched this episode and it is not processed before", logger.DEBUG)
+                return True
+            # if it's not snatched, we only want it if the new quality is higher or if it's a proper of equal or higher quality
+            if new_ep_quality > old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
+                self._log(u"SB snatched this episode and it is a higher quality so I'm marking it as priority", logger.DEBUG)
+                return True
+            if self.is_proper and new_ep_quality >= old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
+                self._log(u"SB snatched this episode and it is a proper of equal or higher quality so I'm marking it as priority", logger.DEBUG)
+                return True
+            return False
+            
         # if the user downloaded it manually and it's higher quality than the existing episode then it's priority
         if new_ep_quality > old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
             self._log(
@@ -818,9 +852,10 @@ class PostProcessor(object):
 
         # retrieve/create the corresponding TVEpisode objects
         ep_obj = self._get_ep_obj(show, season, episodes)
+        old_ep_status, old_ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
 
         # get the quality of the episode we're processing
-        if quality:
+        if quality and not common.Quality.qualityStrings[quality] == 'Unknown':
             self._log(u"Snatch history had a quality in it, using that: " + common.Quality.qualityStrings[quality],
                       logger.DEBUG)
             new_ep_quality = quality
@@ -847,6 +882,11 @@ class PostProcessor(object):
         # if it's not priority then we don't want to replace smaller files in case it was a mistake
         if not priority_download:
 
+            # Not a priority and the quality is lower than what we already have
+            if (new_ep_quality < old_ep_quality and new_ep_quality != common.Quality.UNKNOWN) and not existing_file_status == PostProcessor.DOESNT_EXIST:
+                self._log(u"File exists and new file quality is lower than existing, marking it unsafe to replace", logger.DEBUG)
+                return False
+
             # if there's an existing file that we don't want to replace stop here
             if existing_file_status == PostProcessor.EXISTS_LARGER:
                 if self.is_proper:
@@ -868,6 +908,11 @@ class PostProcessor(object):
             self._log(
                 u"This download is marked a priority download so I'm going to replace an existing file if I find one",
                 logger.DEBUG)
+        
+        # try to find out if we have enough space to perform the copy or move action.
+        if not verify_freespace(self.file_path, ek.ek(os.path.dirname, ep_obj.show._location), [ep_obj] + ep_obj.relatedEps):
+            self._log("Not enough space to continue PP, exiting")
+            return False
 
         # delete the existing file (and company)
         for cur_ep in [ep_obj] + ep_obj.relatedEps:
@@ -900,7 +945,7 @@ class PostProcessor(object):
 
         # update the ep info before we rename so the quality & release name go into the name properly
         sql_l = []
-        trakt_data = [] 
+
         for cur_ep in [ep_obj] + ep_obj.relatedEps:
             with cur_ep.lock:
 
@@ -931,19 +976,6 @@ class PostProcessor(object):
                     cur_ep.release_group = ""
 
                 sql_l.append(cur_ep.get_sql())
-
-                trakt_data.append((cur_ep.season, cur_ep.episode))
-
-        data = notifiers.trakt_notifier.trakt_episode_data_generate(trakt_data)
-
-        if sickbeard.USE_TRAKT and sickbeard.TRAKT_SYNC_WATCHLIST and sickbeard.TRAKT_REMOVE_WATCHLIST:
-            logger.log(u"Remove episodes, showid: indexerid " + str(show.indexerid) + ", Title " + str(show.name) + " to Traktv Watchlist", logger.DEBUG)
-            if data:
-                notifiers.trakt_notifier.update_watchlist(show, data_episode=data, update="remove")
-
-        if len(sql_l) > 0:
-            myDB = db.DBConnection()
-            myDB.mass_action(sql_l)
 
         # Just want to keep this consistent for failed handling right now
         releaseName = show_name_helpers.determineReleaseName(self.folder_path, self.nzb_name)
@@ -981,7 +1013,7 @@ class PostProcessor(object):
         # add to anidb
         if ep_obj.show.is_anime and sickbeard.ANIDB_USE_MYLIST:
             self._add_to_anidb_mylist(self.file_path)
-
+        
         try:
             # move the episode and associated files to the show dir
             if self.process_method == "copy":
@@ -1008,6 +1040,11 @@ class PostProcessor(object):
                 with cur_ep.lock:
                     cur_ep.location = ek.ek(os.path.join, dest_path, new_file_name)
                     cur_ep.downloadSubtitles(force=True)
+
+        # now that processing has finished, we can put the info in the DB. If we do it earlier, then when processing fails, it won't try again.
+        if len(sql_l) > 0:
+            myDB = db.DBConnection()
+            myDB.mass_action(sql_l)
 
         # put the new location in the database
         sql_l = []

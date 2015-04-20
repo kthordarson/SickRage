@@ -768,6 +768,17 @@ td.tvShow a:hover {
     color: #428BCA;
 }
 
+#popover-target label {
+  margin: 0 5px;
+  display: block;
+}
+#popover-target input {
+  margin-left: 5px;
+}
+.popover {
+  margin-left: -50px;
+}
+
 /* =======================================================================
 home_addShows.tmpl
 ========================================================================== */
@@ -1154,6 +1165,29 @@ span.snatched b {
     position: relative;
     top: 2px;
 	opacity: 0.4;
+}
+
+.displayShowTable {
+	table-layout: auto;
+	width: 100%;
+	border-collapse: collapse;
+	border-spacing: 0;
+	text-align: center;
+	border: none;
+	empty-cells: show;
+	color: #000 !important;
+}
+
+.displayShowTable.display_show {
+	clear:both
+}
+
+.displayShowTable th.row-seasonheader {
+	border: none !important;
+	background-color: #fff !important;
+	color: #000 !important; 
+	padding-top: 15px !important;
+	text-align: left !important;
 }
 
 .sickbeardTable {
@@ -2763,6 +2797,29 @@ thead.tablesorter-stickyHeader {
 	display: none;
 }
 
+/* hidden filter row */
+.tablesorter-filter-row.hideme td {
+  /*** *********************************************** ***/
+  /*** change this padding to modify the thickness     ***/
+  /*** of the closed filter row (height = padding x 2) ***/
+  padding: 2px;
+  /*** *********************************************** ***/
+  margin: 0;
+  line-height: 0;
+  cursor: pointer;
+}
+.tablesorter-filter-row.hideme * {
+  height: 1px;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  /* don't use visibility: hidden because it disables tabbing */
+  opacity: 0;
+  filter: alpha(opacity=0);
+}
+
+
 .tablesorter-header-inner {
 	padding: 0 2px;
 	text-align: center;
@@ -3009,3 +3066,19 @@ jquery.confirm.css
 #confirmBox .red:hover {
 	background-color: #A13331;
 }
+
+/* =======================================================================
+bootstarp modal
+========================================================================== */
+
+.modal-header {
+    padding:9px 15px;
+    border-bottom:1px solid #eee;
+    background-color: #F5F1E4;
+    -webkit-border-top-left-radius: 5px;
+    -webkit-border-top-right-radius: 5px;
+    -moz-border-radius-topleft: 5px;
+    -moz-border-radius-topright: 5px;
+     border-top-left-radius: 5px;
+     border-top-right-radius: 5px;
+ }

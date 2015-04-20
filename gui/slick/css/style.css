@@ -794,6 +794,17 @@ td.tvShow a:hover {
 	color: #428BCA;
 }
 
+#popover-target label {
+  margin: 0 5px;
+  display: block;
+}
+#popover-target input {
+  margin-left: 5px;
+}
+.popover {
+  margin-left: -50px;
+}
+
 /* =======================================================================
 home_addShows.tmpl
 ========================================================================== */
@@ -1180,6 +1191,29 @@ span.snatched b {
 	position: relative;
 	top: 2px;
 	opacity: 0.4;
+}
+
+.displayShowTable {
+	table-layout: auto;
+	width: 100%;
+	border-collapse: collapse;
+	border-spacing: 0;
+	text-align: center;
+	border: none;
+	empty-cells: show;
+	color: #000 !important;
+}
+
+.displayShowTable.display_show {
+	clear:both
+}
+
+.displayShowTable th.row-seasonheader {
+	border: none !important;
+	background-color: #222 !important;
+	color: #fff !important;
+	padding-top: 15px !important;
+	text-align: left !important;
 }
 
 .sickbeardTable {
