@@ -187,44 +187,29 @@ def snatchEpisode(result, endStatus=SNATCHED):
     return True
 
 
-def pickBestResult(results, show, quality_list=None):
+def pickBestResult(results, show):
     results = results if isinstance(results, list) else [results]
 
     logger.log(u"Picking the best result out of " + str([x.name for x in results]), logger.DEBUG)
 
-    bwl = None
     bestResult = None
 
     # find the best result for the current episode
     for cur_result in results:
         if show and cur_result.show is not show:
             continue
-
-        # filter out possible bad torrents from providers such as ezrss
-        if isinstance(cur_result, sickbeard.classes.SearchResult):
-            if cur_result.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
-                if not cur_result.url.startswith('magnet'):
-                    cur_result.content = cur_result.provider.getURL(cur_result.url)
-                    if not cur_result.content:
-                        continue
-        else:
-            if not cur_result.url.startswith('magnet'):
-                cur_result.content = cur_result.provider.getURL(cur_result.url)
-                logger.log(u"search_queue.py running pickbestresult for url " + cur_result.url)
-                if not cur_result.content:
-                    continue
+        logger.log(u"search_queue.py running pickbestresult for url " + cur_result.url)
 
         # build the black And white list
-        if cur_result.show.is_anime:
-            if not bwl:
-                bwl = BlackAndWhiteList(cur_result.show.indexerid)
-            if not bwl.is_valid(cur_result):
-                logger.log(cur_result.name+" does not match the blacklist or the whitelist, rejecting it. Result: " + bwl.get_last_result_msg(), logger.INFO)
+        if show.is_anime:
+            if not show.release_groups.is_valid(cur_result):
                 continue
 
         logger.log("Quality of " + cur_result.name + " is " + Quality.qualityStrings[cur_result.quality])
 
-        if quality_list and cur_result.quality not in quality_list:
+        anyQualities, bestQualities = Quality.splitQuality(show.quality)
+
+        if cur_result.quality not in anyQualities + bestQualities:
             logger.log(cur_result.name + " is a quality we know we don't want, rejecting it", logger.DEBUG)
             continue
 
@@ -249,10 +234,19 @@ def pickBestResult(results, show, quality_list=None):
                 logger.log(cur_result.name + u" has previously failed, rejecting it")
                 continue
 
-        if not bestResult or bestResult.quality < cur_result.quality and cur_result.quality != Quality.UNKNOWN:
-            bestResult = cur_result
+        # Download the torrent file contents only if it has passed all other checks!
+        # Must be done before setting bestResult
+        if cur_result.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
+            if len(cur_result.url) and  not cur_result.url.startswith('magnet'):
+                cur_result.content = cur_result.provider.getURL(cur_result.url)
+                if not cur_result.content:
+                    continue
 
-        elif bestResult.quality == cur_result.quality:
+        if cur_result.quality in bestQualities and (not bestResult or bestResult.quality < cur_result.quality or bestResult not in bestQualities):
+            bestResult = cur_result
+        elif cur_result.quality in anyQualities and (not bestResult or bestResult not in bestQualities) and (not bestResult or bestResult.quality < cur_result.quality):
+            bestResult = cur_result
+        elif bestResult and bestResult.quality == cur_result.quality:
             if "proper" in cur_result.name.lower() or "repack" in cur_result.name.lower():
                 bestResult = cur_result
             elif "internal" in bestResult.name.lower() and "internal" not in cur_result.name.lower():
@@ -282,9 +276,6 @@ def isFinalResult(result):
 
     show_obj = result.episodes[0].show
 
-    bwl = None
-    if show_obj.is_anime:
-        bwl = BlackAndWhiteList(show_obj.indexerid)
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
@@ -293,7 +284,7 @@ def isFinalResult(result):
         return False
 
     # if it does not match the shows black and white list its no good
-    elif bwl and not bwl.is_valid(result):
+    elif show_obj.is_anime and show_obj.release_groups.is_valid(result):
         return False
 
     # if there's no redownload that's higher (above) and this is the highest initial download then we're good
@@ -301,14 +292,7 @@ def isFinalResult(result):
         return True
 
     elif best_qualities and result.quality == max(best_qualities):
-
-        # if this is the best redownload but we have a higher initial download then keep looking
-        if any_qualities and result.quality < max(any_qualities):
-            return False
-
-        # if this is the best redownload and we don't have a higher initial download then we're done
-        else:
-            return True
+        return True
 
     # if we got here than it's either not on the lists, they're empty, or it's lower than the highest required
     else:
@@ -337,7 +321,7 @@ def wantedEpisodes(show, fromDate):
     anyQualities, bestQualities = common.Quality.splitQuality(show.quality) # @UnusedVariable
     allQualities = list(set(anyQualities + bestQualities))
 
-    logger.log(u"Seeing if we need anything from " + show.name)
+    logger.log(u"Seeing if we need anything from " + show.name, logger.DEBUG)
     myDB = db.DBConnection()
 
     if show.air_by_date:
@@ -400,7 +384,17 @@ def searchForNeededEpisodes():
 
     for curProvider in providers:
         threading.currentThread().name = origThreadName + " :: [" + curProvider.name + "]"
-        curFoundResults = curProvider.searchRSS(episodes)
+        curFoundResults = {}
+        try:
+            curFoundResults = curProvider.searchRSS(episodes)
+        except exceptions.AuthException, e:
+            logger.log(u"Authentication error: " + ex(e), logger.ERROR)
+            continue
+        except Exception, e:
+            logger.log(u"Error while searching " + curProvider.name + ", skipping: " + ex(e), logger.ERROR)
+            logger.log(traceback.format_exc(), logger.DEBUG)
+            continue
+
         didSearch = True
 
         # pick a single result for each episode, respecting existing results
@@ -423,7 +417,7 @@ def searchForNeededEpisodes():
     if not didSearch:
         logger.log(
             u"No NZB/Torrent providers found or enabled in the sickrage config for daily searches. Please check your settings.",
-            logger.ERROR)
+            logger.WARNING)
 
     return foundResults.values()
 
@@ -504,23 +498,20 @@ def searchProviders(show, episodes, manualSearch=False, downCurQuality=False):
                 break
 
             if search_mode == 'sponly':
-                logger.log(u"FALLBACK EPISODE SEARCH INITIATED ...")
+                logger.log(u"FALLBACK EPISODE SEARCH INITIATED ...", logger.DEBUG)
                 search_mode = 'eponly'
             else:
-                logger.log(u"FALLBACK SEASON PACK SEARCH INITIATED ...")
+                logger.log(u"FALLBACK SEASON PACK SEARCH INITIATED ...", logger.DEBUG)
                 search_mode = 'sponly'
 
         # skip to next provider if we have no results to process
         if not len(foundResults[curProvider.name]):
             continue
 
-        anyQualities, bestQualities = Quality.splitQuality(show.quality)
-
         # pick the best season NZB
         bestSeasonResult = None
         if SEASON_RESULT in foundResults[curProvider.name]:
-            bestSeasonResult = pickBestResult(foundResults[curProvider.name][SEASON_RESULT], show,
-                                           anyQualities + bestQualities)
+            bestSeasonResult = pickBestResult(foundResults[curProvider.name][SEASON_RESULT], show)
 
         highest_quality_overall = 0
         for cur_episode in foundResults[curProvider.name]:
@@ -665,6 +656,7 @@ def searchProviders(show, episodes, manualSearch=False, downCurQuality=False):
                 for epObj in multiResult.episodes:
                     if not multiResult.url.startswith('magnet'):
                         multiResult.content = multiResult.provider.getURL(cur_result.url)
+
                     multiResults[epObj.episode] = multiResult
 
                 # don't bother with the single result if we're going to get it with a multi result
@@ -715,6 +707,6 @@ def searchProviders(show, episodes, manualSearch=False, downCurQuality=False):
 
     if not didSearch:
         logger.log(u"No NZB/Torrent providers found or enabled in the sickrage config for backlog searches. Please check your settings.",
-                   logger.ERROR)
+                   logger.WARNING)
 
     return finalResults

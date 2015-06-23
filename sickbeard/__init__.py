@@ -36,9 +36,9 @@ from github import Github
 
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
-from providers import ezrss, btn, newznab, womble, thepiratebay, oldpiratebay, torrentleech, kat, iptorrents, \
+from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, hounddawgs, nextgen, speedcd, nyaatorrents, animenzb, torrentbytes, animezb, \
-    freshontv, morethantv, bitsoup, t411, tokyotoshokan, shazbat, rarbg, alpharatio, tntvillage, binsearch, eztv, scenetime, deildu
+    freshontv, morethantv, bitsoup, t411, tokyotoshokan, shazbat, rarbg, alpharatio, tntvillage, binsearch, scenetime, deildu
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
@@ -182,6 +182,8 @@ TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
 SORT_ARTICLE = False
 DEBUG = False
+DISPLAY_ALL_SEASONS = True
+
 
 USE_LISTVIEW = False
 METADATA_KODI = None
@@ -336,6 +338,9 @@ PLEX_SERVER_TOKEN = None
 PLEX_HOST = None
 PLEX_USERNAME = None
 PLEX_PASSWORD = None
+USE_PLEX_CLIENT = False
+PLEX_CLIENT_USERNAME = None
+PLEX_CLIENT_PASSWORD = None
 
 USE_GROWL = False
 GROWL_NOTIFY_ONSNATCH = False
@@ -419,7 +424,8 @@ SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 
 USE_TRAKT = False
 TRAKT_USERNAME = None
-TRAKT_PASSWORD = None
+TRAKT_ACCESS_TOKEN = None
+TRAKT_REFRESH_TOKEN = None
 TRAKT_REMOVE_WATCHLIST = False
 TRAKT_REMOVE_SERIESLIST = False
 TRAKT_SYNC_WATCHLIST = False
@@ -520,7 +526,14 @@ CALENDAR_UNPROTECTED = False
 NO_RESTART = False
 
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
-TRAKT_API_KEY = 'd4161a7a106424551add171e5470112e4afdaf2438e6ef2fe0548edc75924868'
+#TRAKT_API_KEY = 'd4161a7a106424551add171e5470112e4afdaf2438e6ef2fe0548edc75924868'
+
+TRAKT_API_KEY = '5c65f55e11d48c35385d9e8670615763a605fad28374c8ae553a7b7a50651ddd'
+TRAKT_API_SECRET ='b53e32045ac122a445ef163e6d859403301ffe9b17fb8321d428531b69022a82'
+TRAKT_PIN_URL = 'https://trakt.tv/pin/4562'
+TRAKT_OAUTH_URL = 'https://trakt.tv/'
+TRAKT_API_URL = 'https://api-v2launch.trakt.tv/'
+
 FANART_API_KEY = '9b3afaf26f6241bdb57d6cc6bd798da7'
 
 __INITIALIZED__ = False
@@ -541,8 +554,8 @@ def initialize(consoleLogging=True):
             TORRENT_USERNAME, TORRENT_PASSWORD, TORRENT_HOST, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_LABEL, TORRENT_LABEL_ANIME, TORRENT_VERIFY_CERT, TORRENT_RPCURL, TORRENT_AUTH_TYPE, \
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, \
             KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, BACKLOG_FREQUENCY, \
-            USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_REMOVE_WATCHLIST, TRAKT_SYNC_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, traktRollingScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_SYNC_REMOVE, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_DISABLE_SSL_VERIFY, TRAKT_TIMEOUT, TRAKT_BLACKLIST_NAME, TRAKT_USE_ROLLING_DOWNLOAD, TRAKT_ROLLING_NUM_EP, TRAKT_ROLLING_ADD_PAUSED, TRAKT_ROLLING_FREQUENCY, \
-            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
+            USE_TRAKT, TRAKT_USERNAME, TRAKT_ACCESS_TOKEN, TRAKT_REFRESH_TOKEN, TRAKT_REMOVE_WATCHLIST, TRAKT_SYNC_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, traktRollingScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_SYNC_REMOVE, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_DISABLE_SSL_VERIFY, TRAKT_TIMEOUT, TRAKT_BLACKLIST_NAME, TRAKT_USE_ROLLING_DOWNLOAD, TRAKT_ROLLING_NUM_EP, TRAKT_ROLLING_ADD_PAUSED, TRAKT_ROLLING_FREQUENCY, \
+            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, USE_PLEX_CLIENT, PLEX_CLIENT_USERNAME, PLEX_CLIENT_PASSWORD, \
             PLEX_SERVER_HOST, PLEX_SERVER_TOKEN, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, INDEXER_DEFAULT_LANGUAGE, EP_DEFAULT_DELETED_STATUS, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, UPDATE_SHOWS_ON_SNATCH, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, SORT_ARTICLE, showList, loadingShowList, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
@@ -576,7 +589,7 @@ def initialize(consoleLogging=True):
             AUTOPOSTPROCESSER_FREQUENCY, SHOWUPDATE_HOUR, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             ANIME_SPLIT_HOME, SCENE_DEFAULT, DOWNLOAD_URL, BACKLOG_DAYS, GIT_ORG, GIT_REPO, GIT_USERNAME, GIT_PASSWORD, \
-            GIT_AUTOISSUES, DEVELOPER, gh
+            GIT_AUTOISSUES, DEVELOPER, gh, DISPLAY_ALL_SEASONS
 
         if __INITIALIZED__:
             return False
@@ -938,7 +951,10 @@ def initialize(consoleLogging=True):
         PLEX_HOST = check_setting_str(CFG, 'Plex', 'plex_host', '')
         PLEX_USERNAME = check_setting_str(CFG, 'Plex', 'plex_username', '', censor_log=True)
         PLEX_PASSWORD = check_setting_str(CFG, 'Plex', 'plex_password', '', censor_log=True)
-
+        USE_PLEX_CLIENT = bool(check_setting_int(CFG, 'Plex', 'use_plex_client', 0))
+        PLEX_CLIENT_USERNAME = check_setting_str(CFG, 'Plex', 'plex_client_username', '', censor_log=True)
+        PLEX_CLIENT_PASSWORD = check_setting_str(CFG, 'Plex', 'plex_client_password', '', censor_log=True)
+        
         USE_GROWL = bool(check_setting_int(CFG, 'Growl', 'use_growl', 0))
         GROWL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Growl', 'growl_notify_onsnatch', 0))
         GROWL_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Growl', 'growl_notify_ondownload', 0))
@@ -1017,7 +1033,8 @@ def initialize(consoleLogging=True):
 
         USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
         TRAKT_USERNAME = check_setting_str(CFG, 'Trakt', 'trakt_username', '', censor_log=True)
-        TRAKT_PASSWORD = check_setting_str(CFG, 'Trakt', 'trakt_password', '', censor_log=True)
+        TRAKT_ACCESS_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_access_token', '', censor_log=True)
+        TRAKT_REFRESH_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_refresh_token', '', censor_log=True)
         TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
         TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
         TRAKT_SYNC_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync_watchlist', 0))
@@ -1036,7 +1053,7 @@ def initialize(consoleLogging=True):
         TRAKT_ROLLING_FREQUENCY = check_setting_int(CFG, 'Trakt', 'trakt_rolling_frequency', 8)
         if TRAKT_ROLLING_FREQUENCY < 4:
             TRAKT_ROLLING_FREQUENCY = 4
-
+        
         CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
         PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
@@ -1145,6 +1162,7 @@ def initialize(consoleLogging=True):
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
         FILTER_ROW =  bool(check_setting_int(CFG, 'GUI', 'filter_row', 0))
+        DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
 
         # initialize NZB and TORRENT providers
         providerList = providers.makeProviderList()
@@ -1187,6 +1205,12 @@ def initialize(consoleLogging=True):
             if hasattr(curTorrentProvider, 'confirmed'):
                 curTorrentProvider.confirmed = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
                                                                       curTorrentProvider.getID() + '_confirmed', 0))
+            if hasattr(curTorrentProvider, 'ranked'):
+                curTorrentProvider.ranked = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
+                                                                      curTorrentProvider.getID() + '_ranked', 0))
+            if hasattr(curTorrentProvider, 'sorting'):
+                curTorrentProvider.sorting = check_setting_str(CFG, curTorrentProvider.getID().upper(),
+                                                                   curTorrentProvider.getID() + '_sorting','seeders')
             if hasattr(curTorrentProvider, 'options'):
                 curTorrentProvider.options = check_setting_str(CFG, curTorrentProvider.getID().upper(),
                                                                curTorrentProvider.getID() + '_options', '')
@@ -1626,7 +1650,7 @@ def save_config():
     new_config['General']['web_username'] = WEB_USERNAME
     new_config['General']['web_password'] = helpers.encrypt(WEB_PASSWORD, ENCRYPTION_VERSION)
     new_config['General']['web_cookie_secret'] = WEB_COOKIE_SECRET
-    new_config['General']['web_use_gzip'] = WEB_USE_GZIP
+    new_config['General']['web_use_gzip'] = int(WEB_USE_GZIP)
     new_config['General']['download_url'] = DOWNLOAD_URL
     new_config['General']['localhost_ip'] = LOCALHOST_IP
     new_config['General']['cpu_preset'] = CPU_PRESET
@@ -1723,6 +1747,7 @@ def save_config():
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
     new_config['General']['no_restart'] = int(NO_RESTART)
     new_config['General']['developer'] = int(DEVELOPER)
+    new_config['General']['display_all_seasons'] = int(DISPLAY_ALL_SEASONS)
 
     new_config['Blackhole'] = {}
     new_config['Blackhole']['nzb_dir'] = NZB_DIR
@@ -1754,6 +1779,11 @@ def save_config():
         if hasattr(curTorrentProvider, 'confirmed'):
             new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_confirmed'] = int(
                 curTorrentProvider.confirmed)
+        if hasattr(curTorrentProvider, 'ranked'):
+            new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_ranked'] = int(
+                curTorrentProvider.ranked)
+        if hasattr(curTorrentProvider, 'sorting'):
+            new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_sorting'] = curTorrentProvider.sorting
         if hasattr(curTorrentProvider, 'ratio'):
             new_config[curTorrentProvider.getID().upper()][
                 curTorrentProvider.getID() + '_ratio'] = curTorrentProvider.ratio
@@ -1972,7 +2002,8 @@ def save_config():
     new_config['Trakt'] = {}
     new_config['Trakt']['use_trakt'] = int(USE_TRAKT)
     new_config['Trakt']['trakt_username'] = TRAKT_USERNAME
-    new_config['Trakt']['trakt_password'] = helpers.encrypt(TRAKT_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Trakt']['trakt_access_token'] = TRAKT_ACCESS_TOKEN
+    new_config['Trakt']['trakt_refresh_token'] = TRAKT_REFRESH_TOKEN
     new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
     new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
     new_config['Trakt']['trakt_sync_watchlist'] = int(TRAKT_SYNC_WATCHLIST)

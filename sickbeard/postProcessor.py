@@ -184,7 +184,7 @@ class PostProcessor(object):
         base_name = re.sub(r'[\[\]\*\?]', r'[\g<0>]', base_name)
         
         if subfolders: # subfolders are only checked in show folder, so names will always be exactly alike
-            filelist = ek.ek(recursive_glob, ek.ek(os.path.dirname, file_path),  base_name + '*') # just create the list of all files starting with the basename
+            filelist = ek.ek(recursive_glob, ek.ek(os.path.dirname, file_path), base_name + '*') # just create the list of all files starting with the basename
         else: # this is called when PP, so we need to do the filename check case-insensitive
             filelist = []
             checklist = ek.ek(glob.glob, ek.ek(os.path.join, ek.ek(os.path.dirname, file_path), '*')) # get a list of all the files in the folder
@@ -341,7 +341,7 @@ class PostProcessor(object):
                 helpers.moveFile(cur_file_path, new_file_path)
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
-                self._log("Unable to move file " + cur_file_path + " to " + new_file_path + ": " + str(e), logger.ERROR)
+                self._log("Unable to move file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
                 raise
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_move,
@@ -497,12 +497,12 @@ class PostProcessor(object):
         if none were found.
         """
 
-        logger.log(u"Analyzing name " + repr(name))
-
         to_return = (None, None, [], None, None)
 
         if not name:
             return to_return
+
+        logger.log(u"Analyzing name " + repr(name), logger.DEBUG)
 
         name = helpers.remove_non_release_groups(helpers.remove_extension(name))
 
@@ -910,9 +910,13 @@ class PostProcessor(object):
                 logger.DEBUG)
         
         # try to find out if we have enough space to perform the copy or move action.
-        if not verify_freespace(self.file_path, ek.ek(os.path.dirname, ep_obj.show._location), [ep_obj] + ep_obj.relatedEps):
-            self._log("Not enough space to continue PP, exiting")
-            return False
+        if not helpers.isFileLocked(self.file_path, False):
+            if not verify_freespace(self.file_path, ek.ek(os.path.dirname, ep_obj.show._location), [ep_obj] + ep_obj.relatedEps):
+                self._log("Not enough space to continue PP, exiting")
+                return False
+        else:
+            self._log("Unable to determine needed filespace as the source file is locked for access")
+        
 
         # delete the existing file (and company)
         for cur_ep in [ep_obj] + ep_obj.relatedEps:
@@ -935,6 +939,8 @@ class PostProcessor(object):
             self._log(u"Show directory doesn't exist, creating it", logger.DEBUG)
             try:
                 ek.ek(os.mkdir, ep_obj.show._location)
+                helpers.chmodAsParent(ep_obj.show._location)
+
                 # do the library update for synoindex
                 notifiers.synoindex_notifier.addFolder(ep_obj.show._location)
             except (OSError, IOError):
@@ -1017,15 +1023,21 @@ class PostProcessor(object):
         try:
             # move the episode and associated files to the show dir
             if self.process_method == "copy":
+                if helpers.isFileLocked(self.file_path, False):
+                    raise exceptions.PostProcessingFailed("File is locked for reading")
                 self._copy(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES,
                            sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
             elif self.process_method == "move":
+                if helpers.isFileLocked(self.file_path, True):
+                    raise exceptions.PostProcessingFailed("File is locked for reading/writing")
                 self._move(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES,
                            sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
             elif self.process_method == "hardlink":
                 self._hardlink(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES,
                                sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
             elif self.process_method == "symlink":
+                if helpers.isFileLocked(self.file_path, True):
+                    raise exceptions.PostProcessingFailed("File is locked for reading/writing")
                 self._moveAndSymlink(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES,
                                      sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
             else:
@@ -1076,7 +1088,7 @@ class PostProcessor(object):
         notifiers.kodi_notifier.update_library(ep_obj.show.name)
 
         # do the library update for Plex
-        notifiers.plex_notifier.update_library()
+        notifiers.plex_notifier.update_library(ep_obj)
 
         # do the library update for NMJ
         # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)

@@ -20,6 +20,8 @@
 import re
 import traceback
 import datetime
+import time
+
 import urlparse
 import sickbeard
 import generic
@@ -130,12 +132,12 @@ class SCCProvider(generic.TorrentProvider):
         if self.show.air_by_date:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|')
+                            str(ep_obj.airdate).replace('-', '.')
                 search_string['Episode'].append(ep_string)
         elif self.show.sports:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|') + '|' + \
+                            str(ep_obj.airdate).replace('-', '.') + '|' + \
                             ep_obj.airdate.strftime('%b')
                 search_string['Episode'].append(ep_string)
         elif self.show.anime:
@@ -147,7 +149,10 @@ class SCCProvider(generic.TorrentProvider):
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
                             sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                                  'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
+                                                                  'episodenumber': ep_obj.scene_episode}
+
+                if len(add_string):
+                    ep_string += ' %s' % add_string
 
                 search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
 
@@ -188,6 +193,7 @@ class SCCProvider(generic.TorrentProvider):
                     logger.log(u"Search string: " + searchURL, logger.DEBUG)
                     try:
                         data += [x for x in [self.getURL(searchURL)] if x]
+                        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
                     except Exception as e:
                         logger.log(u"Unable to fetch data reason: {0}".format(str(e)), logger.WARNING)
 
@@ -259,8 +265,6 @@ class SCCProvider(generic.TorrentProvider):
         title, url, id, seeders, leechers = item
 
         if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
             title = self._clean_title_from_provider(title)
 
         if url:

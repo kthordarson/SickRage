@@ -21,8 +21,8 @@ import traceback
 import datetime
 import sickbeard
 import generic
-import requests
-import requests.exceptions
+from lib import requests
+from lib.requests import exceptions
 import urllib
 
 from sickbeard.common import Quality
@@ -228,8 +228,6 @@ class BitSoupProvider(generic.TorrentProvider):
         title, url, id, seeders, leechers = item
 
         if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
             title = self._clean_title_from_provider(title)
 
         if url:
