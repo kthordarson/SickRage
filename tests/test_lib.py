@@ -20,7 +20,6 @@
 from __future__ import with_statement
 
 import unittest
-import sqlite3
 from configobj import ConfigObj
 
 import sys, os.path
@@ -36,9 +35,9 @@ from sickbeard.databases import cache_db, failed_db
 from sickbeard.tv import TVEpisode
 
 import shutil
-import lib.shutil_custom
+import shutil_custom
 
-shutil.copyfile = lib.shutil_custom.copyfile_custom
+shutil.copyfile = shutil_custom.copyfile_custom
 
 #=================
 # test globals
@@ -209,7 +208,8 @@ def tearDown_test_db():
 #                os.remove(file_name)
 #            except Exception as e:
 #                print 'ERROR: Failed to remove ' + file_name
-#                print ex(e)
+#                print exception(e)
+
 
 def setUp_test_episode_file():
     if not os.path.exists(FILEDIR):

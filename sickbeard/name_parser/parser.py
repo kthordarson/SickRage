@@ -21,13 +21,13 @@ from __future__ import with_statement
 import os
 import time
 import re
-import datetime
 import os.path
 import regexes
 import sickbeard
 
-from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
-from sickbeard.exceptions import ex
+from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, db
+from sickrage.helper.encoding import ek
+from sickrage.helper.exceptions import ex
 from dateutil import parser
 
 
@@ -36,14 +36,12 @@ class NameParser(object):
     NORMAL_REGEX = 1
     ANIME_REGEX = 2
 
-    def __init__(self, file_name=True, showObj=None, tryIndexers=False, trySceneExceptions=False, convert=False,
-                 naming_pattern=False):
+    def __init__(self, file_name=True, showObj=None, tryIndexers=False, trySceneExceptions=False, naming_pattern=False):
 
         self.file_name = file_name
         self.showObj = showObj
         self.tryIndexers = tryIndexers
         self.trySceneExceptions = trySceneExceptions
-        self.convert = convert
         self.naming_pattern = naming_pattern
 
         if self.showObj and not self.showObj.is_anime:
@@ -53,7 +51,8 @@ class NameParser(object):
         else:
             self._compile_regexes(self.ALL_REGEX)
 
-    def clean_series_name(self, series_name):
+    @staticmethod
+    def clean_series_name(series_name):
         """Cleans up series name by removing any . and _
         characters, along with any trailing hyphens.
 
@@ -68,13 +67,13 @@ class NameParser(object):
         Stolen from dbr's tvnamer
         """
 
-        series_name = re.sub("(\D)\.(?!\s)(\D)", "\\1 \\2", series_name)
-        series_name = re.sub("(\d)\.(\d{4})", "\\1 \\2", series_name)  # if it ends in a year then don't keep the dot
-        series_name = re.sub("(\D)\.(?!\s)", "\\1 ", series_name)
-        series_name = re.sub("\.(?!\s)(\D)", " \\1", series_name)
+        series_name = re.sub(r"(\D)\.(?!\s)(\D)", "\\1 \\2", series_name)
+        series_name = re.sub(r"(\d)\.(\d{4})", "\\1 \\2", series_name)  # if it ends in a year then don't keep the dot
+        series_name = re.sub(r"(\D)\.(?!\s)", "\\1 ", series_name)
+        series_name = re.sub(r"\.(?!\s)(\D)", " \\1", series_name)
         series_name = series_name.replace("_", " ")
-        series_name = re.sub("-$", "", series_name)
-        series_name = re.sub("^\[.*\]", "", series_name)
+        series_name = re.sub(r"-$", "", series_name)
+        series_name = re.sub(r"^\[.*\]", "", series_name)
         return series_name.strip()
 
     def _compile_regexes(self, regexMode):
@@ -157,7 +156,7 @@ class NameParser(object):
                 try:
                     result.air_date = parser.parse(air_date, fuzzy=True).date()
                     result.score += 1
-                except:
+                except Exception:
                     continue
 
             if 'extra_info' in named_groups:
@@ -228,7 +227,7 @@ class NameParser(object):
                 if sql_result:
                     season_number = int(sql_result[0][0])
                     episode_numbers = [int(sql_result[0][1])]
-                
+
                 if not season_number or not len(episode_numbers):
                     try:
                         lINDEXER_API_PARMS = sickbeard.indexerApi(bestResult.show.indexer).api_params.copy()
@@ -253,7 +252,7 @@ class NameParser(object):
                     s = season_number
                     e = epNo
 
-                    if self.convert:
+                    if bestResult.show.is_scene:
                         (s, e) = scene_numbering.get_indexer_numbering(bestResult.show.indexerid,
                                                                        bestResult.show.indexer,
                                                                        season_number,
@@ -266,7 +265,7 @@ class NameParser(object):
                 for epAbsNo in bestResult.ab_episode_numbers:
                     a = epAbsNo
 
-                    if self.convert:
+                    if bestResult.show.is_scene:
                         a = scene_numbering.get_indexer_absolute_numbering(bestResult.show.indexerid,
                                                                            bestResult.show.indexer, epAbsNo,
                                                                            True, scene_season)
@@ -282,7 +281,7 @@ class NameParser(object):
                     s = bestResult.season_number
                     e = epNo
 
-                    if self.convert:
+                    if bestResult.show.is_scene:
                         (s, e) = scene_numbering.get_indexer_numbering(bestResult.show.indexerid,
                                                                        bestResult.show.indexer,
                                                                        bestResult.season_number,
@@ -321,7 +320,7 @@ class NameParser(object):
                 bestResult.episode_numbers = new_episode_numbers
                 bestResult.season_number = new_season_numbers[0]
 
-            if self.convert:
+            if bestResult.show.is_scene:
                 logger.log(
                     u"Converted parsed result " + bestResult.original_name + " into " + str(bestResult).decode('utf-8',
                                                                                                                'xmlcharrefreplace'),
@@ -348,19 +347,21 @@ class NameParser(object):
         b = getattr(second, attr)
 
         # if a is good use it
-        if a != None or (type(a) == list and len(a)):
+        if a != None or (isinstance(a, list) and a):
             return a
         # if not use b (if b isn't set it'll just be default)
         else:
             return b
 
-    def _unicodify(self, obj, encoding="utf-8"):
+    @staticmethod
+    def _unicodify(obj, encoding="utf-8"):
         if isinstance(obj, basestring):
             if not isinstance(obj, unicode):
                 obj = unicode(obj, encoding, 'replace')
         return obj
 
-    def _convert_number(self, org_number):
+    @staticmethod
+    def _convert_number(org_number):
         """
          Convert org_number into an integer
          org_number: integer or representation of a number: string or unicode
@@ -375,11 +376,12 @@ class NameParser(object):
             else:
                 number = 0
 
-        except:
+        except Exception:
             # on error try converting from Roman numerals
-            roman_to_int_map = (('M', 1000), ('CM', 900), ('D', 500), ('CD', 400), ('C', 100),
-                                ('XC', 90), ('L', 50), ('XL', 40), ('X', 10),
-                                ('IX', 9), ('V', 5), ('IV', 4), ('I', 1)
+            roman_to_int_map = (
+                ('M', 1000), ('CM', 900), ('D', 500), ('CD', 400), ('C', 100),
+                ('XC', 90), ('L', 50), ('XL', 40), ('X', 10),
+                ('IX', 9), ('V', 5), ('IV', 4), ('I', 1)
             )
 
             roman_numeral = str(org_number).upper()
@@ -404,7 +406,7 @@ class NameParser(object):
             return cached
 
         # break it into parts if there are any (dirname, file name, extension)
-        dir_name, file_name = ek.ek(os.path.split, name)
+        dir_name, file_name = ek(os.path.split, name)
 
         if self.file_name:
             base_file_name = helpers.remove_extension(file_name)
@@ -482,7 +484,7 @@ class ParseResult(object):
                  score=None,
                  quality=None,
                  version=None
-    ):
+                ):
 
         self.original_name = original_name
 
@@ -549,16 +551,16 @@ class ParseResult(object):
         else:
             to_return = u''
         if self.season_number != None:
-            to_return += 'S' + str(self.season_number)
+            to_return += 'S' + str(self.season_number).zfill(2)
         if self.episode_numbers and len(self.episode_numbers):
             for e in self.episode_numbers:
-                to_return += 'E' + str(e)
+                to_return += 'E' + str(e).zfill(2)
 
         if self.is_air_by_date:
             to_return += str(self.air_date)
         if self.ab_episode_numbers:
             to_return += ' [ABS: ' + str(self.ab_episode_numbers) + ']'
-        if self.version:
+        if self.version and self.is_anime is True:
             to_return += ' [ANIME VER: ' + str(self.version) + ']'
 
         if self.release_group:
@@ -589,10 +591,8 @@ class NameParserCache(object):
 
     def add(self, name, parse_result):
         self._previous_parsed[name] = parse_result
-        _current_cache_size = len(self._previous_parsed)
-        if _current_cache_size > self._cache_size:
-            for i in range(_current_cache_size - self._cache_size):
-                del self._previous_parsed[self._previous_parsed.keys()[0]]
+        while len(self._previous_parsed) > self._cache_size:
+            del self._previous_parsed[self._previous_parsed.keys()[0]]
 
     def get(self, name):
         if name in self._previous_parsed:

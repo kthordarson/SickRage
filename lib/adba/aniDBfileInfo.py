@@ -19,11 +19,15 @@ from __future__ import with_statement
 
 import hashlib
 import os
-import xml.etree.cElementTree as etree
 import time
 
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    import xml.etree.ElementTree as etree
+
 # http://www.radicand.org/blog/orz/2010/2/21/edonkey2000-hash-in-python/
-from lib import requests
+import requests
 
 
 def get_file_hash(filePath):

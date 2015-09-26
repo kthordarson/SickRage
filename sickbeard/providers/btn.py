@@ -29,13 +29,14 @@ from sickbeard import scene_exceptions
 from sickbeard import logger
 from sickbeard import tvcache
 from sickbeard.helpers import sanitizeSceneName
-from sickbeard.exceptions import ex, AuthException
-from sickbeard.common import MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
+from sickbeard.common import MULTI_EP_RESULT
+from sickbeard.common import SEASON_RESULT
 from sickbeard import db
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.common import Quality
+from sickbeard.common import Quality, cpu_presets
+from sickrage.helper.exceptions import AuthException, ex
 
-from lib import jsonrpclib
+import jsonrpclib
 from datetime import datetime
 
 
@@ -44,6 +45,7 @@ class BTNProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "BTN")
 
         self.supportsBacklog = True
+        self.public = False
         self.supportsAbsoluteNumbering = True
 
         self.enabled = False
@@ -52,10 +54,10 @@ class BTNProvider(generic.TorrentProvider):
 
         self.cache = BTNCache(self)
 
-        self.urls = {'base_url': "http://api.btnapps.net"}
+        self.urls = {'base_url': u'http://api.btnapps.net',
+                     'website': u'http://broadcasthe.net/',}
 
-
-        self.url = self.urls['base_url']
+        self.url = self.urls['website']
 
     def isEnabled(self):
         return self.enabled
@@ -139,15 +141,16 @@ class BTNProvider(generic.TorrentProvider):
 
     def _api_call(self, apikey, params={}, results_per_page=1000, offset=0):
 
-        server = jsonrpclib.Server(self.url)
+        server = jsonrpclib.Server(self.urls['base_url'])
         parsedJSON = {}
 
         try:
             parsedJSON = server.getTorrents(apikey, params, int(results_per_page), int(offset))
+            time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
         except jsonrpclib.jsonrpc.ProtocolError, error:
             if error.message == 'Call Limit Exceeded':
-                logger.log(u"You have exceeded the limit of 150 calls per hour, per API key which is unique to your user account.", logger.WARNING)                
+                logger.log(u"You have exceeded the limit of 150 calls per hour, per API key which is unique to your user account.", logger.WARNING)
             else:
                 logger.log(u"JSON-RPC protocol error while accessing " + self.name + ": " + ex(error), logger.ERROR)
             parsedJSON = {'api-error': ex(error)}
@@ -219,14 +222,11 @@ class BTNProvider(generic.TorrentProvider):
         if ep_obj.show.indexer == 1:
             current_params['tvdb'] = ep_obj.show.indexerid
             search_params.append(current_params)
-        elif ep_obj.show.indexer == 2:
-            current_params['tvrage'] = ep_obj.show.indexerid
-            search_params.append(current_params)
         else:
             name_exceptions = list(
                 set(scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]))
             for name in name_exceptions:
-                # Search by name if we don't have tvdb or tvrage id
+                # Search by name if we don't have tvdb id
                 current_params['series'] = sanitizeSceneName(name)
                 search_params.append(current_params)
 
@@ -256,9 +256,6 @@ class BTNProvider(generic.TorrentProvider):
         # search
         if ep_obj.show.indexer == 1:
             search_params['tvdb'] = ep_obj.show.indexerid
-            to_return.append(search_params)
-        elif ep_obj.show.indexer == 2:
-            search_params['tvrage'] = ep_obj.show.indexerid
             to_return.append(search_params)
         else:
             # add new query string for every exception
@@ -353,7 +350,7 @@ class BTNProvider(generic.TorrentProvider):
                     else:
                         items[quality].append(item)
 
-            itemList = list(itertools.chain(*[v for (k, v) in sorted(items.items(), reverse=True)]))
+            itemList = list(itertools.chain(*[v for (k, v) in sorted(items.iteritems(), reverse=True)]))
             itemList += itemsUnknown if itemsUnknown else []
 
         # filter results
@@ -363,7 +360,7 @@ class BTNProvider(generic.TorrentProvider):
 
             # parse the file name
             try:
-                myParser = NameParser(False, convert=True)
+                myParser = NameParser(False)
                 parse_result = myParser.parse(title)
             except InvalidNameException:
                 logger.log(u"Unable to parse the filename " + title + " into a valid episode", logger.DEBUG)  # @UndefinedVariable
@@ -379,7 +376,7 @@ class BTNProvider(generic.TorrentProvider):
 
             addCacheEntry = False
             if not (showObj.air_by_date or showObj.sports):
-                if search_mode == 'sponly': 
+                if search_mode == 'sponly':
                     if len(parse_result.episode_numbers):
                         logger.log(
                             u"This is supposed to be a season pack search but the result " + title + " is not a valid season pack, skipping it",
@@ -453,7 +450,7 @@ class BTNProvider(generic.TorrentProvider):
                 logger.log(
                     u"Ignoring result " + title + " because we don't want an episode that is " +
                     Quality.qualityStrings[
-                        quality], logger.DEBUG)
+                        quality], logger.INFO)
 
                 continue
 

@@ -22,22 +22,11 @@ import sickbeard
 import generic
 
 from sickbeard import tvcache
-from sickbeard import helpers
 from sickbeard import classes
 from sickbeard import logger
-from sickbeard.exceptions import ex, AuthException
 from sickbeard import show_name_helpers
 from datetime import datetime
-
-try:
-    import xml.etree.cElementTree as etree
-except ImportError:
-    import elementtree.ElementTree as etree
-
-try:
-    import json
-except ImportError:
-    from lib import simplejson as json
+from sickrage.helper.exceptions import AuthException
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
@@ -52,6 +41,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         self.url = self.urls['base_url']
 
         self.supportsBacklog = True
+        self.public = False
 
     def isEnabled(self):
         return self.enabled

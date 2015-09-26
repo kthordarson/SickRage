@@ -25,13 +25,12 @@ import sickbeard
 
 from sickbeard import logger
 from sickbeard import common
-from sickbeard.exceptions import ex
-from sickbeard.encodingKludge import fixStupidEncodings
+from sickrage.helper.exceptions import ex
 
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
-    import elementtree.ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 
 class PLEXNotifier:
@@ -67,7 +66,7 @@ class PLEXNotifier:
         enc_command = urllib.urlencode(command)
         logger.log(u'PLEX: Encoded API command: ' + enc_command, logger.DEBUG)
 
-        url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
+        url = u'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
         try:
             req = urllib2.Request(url)
             # if we have a password, use authentication
@@ -89,7 +88,7 @@ class PLEXNotifier:
             return 'OK'
 
         except (urllib2.URLError, IOError), e:
-            logger.log(u'PLEX: Warning: Couldn\'t contact Plex at ' + fixStupidEncodings(url) + ' ' + ex(e), logger.WARNING)
+            logger.log(u'PLEX: Warning: Couldn\'t contact Plex at ' + url + ' ' + ex(e), logger.WARNING)
             return False
 
     def _notify_pmc(self, message, title='SickRage', host=None, username=None, password=None, force=False):
@@ -152,7 +151,8 @@ class PLEXNotifier:
         if sickbeard.USE_PLEX:
             update_text = common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title = common.notifyStrings[common.NOTIFY_GIT_UPDATE]
-            self._notify_pmc(update_text + new_version, title)
+            if update_text and title and new_version:
+                self._notify_pmc(update_text + new_version, title)
 
     def test_notify_pmc(self, host, username, password):
         return self._notify_pmc('This is a test notification from SickRage', 'Test Notification', host, username, password, force=True)
@@ -182,10 +182,10 @@ class PLEXNotifier:
                 username = sickbeard.PLEX_USERNAME
             if not password:
                 password = sickbeard.PLEX_PASSWORD
-                
+
             if not plex_server_token:
                 plex_server_token = sickbeard.PLEX_SERVER_TOKEN
-            
+
             # if username and password were provided, fetch the auth token from plex.tv
             token_arg = ''
             if plex_server_token:
@@ -197,7 +197,7 @@ class PLEXNotifier:
                 req.add_header('Authorization', authheader)
                 req.add_header('X-Plex-Device-Name', 'SickRage')
                 req.add_header('X-Plex-Product', 'SickRage Notifier')
-                req.add_header('X-Plex-Client-Identifier', sickbeard.CUR_COMMIT_HASH)
+                req.add_header('X-Plex-Client-Identifier', sickbeard.common.USER_AGENT)
                 req.add_header('X-Plex-Version', '1.0')
 
                 try:
@@ -211,7 +211,7 @@ class PLEXNotifier:
 
                 except (ValueError, IndexError) as e:
                     logger.log(u'PLEX: Error parsing plex.tv response: ' + ex(e), logger.DEBUG)
-                
+
             file_location = '' if None is ep_obj else ep_obj.location
             host_list = [x.strip() for x in host.split(',')]
             hosts_all = {}
@@ -226,6 +226,12 @@ class PLEXNotifier:
                 except IOError, e:
                     logger.log(u'PLEX: Error while trying to contact Plex Media Server: ' + ex(e), logger.WARNING)
                     hosts_failed.append(cur_host)
+                    continue
+                except Exception as e:
+                    if 'invalid token' in str(e):
+                        logger.log(u'PLEX: Please set TOKEN in Plex settings: ', logger.ERROR)
+                    else:
+                        logger.log(u'PLEX: Error while trying to contact Plex Media Server: ' + ex(e), logger.ERROR)
                     continue
 
                 sections = media_container.findall('.//Directory')
@@ -251,9 +257,9 @@ class PLEXNotifier:
                             if section_path in location_path:
                                 hosts_match.update(keyed_host)
 
-            hosts_try = (hosts_all.copy(), hosts_match.copy())[len(hosts_match)]
+            hosts_try = (hosts_all.copy(), hosts_match.copy())[bool(hosts_match)]
             host_list = []
-            for section_key, cur_host in hosts_try.items():
+            for section_key, cur_host in hosts_try.iteritems():
 
                 url = 'http://%s/library/sections/%s/refresh%s' % (cur_host, section_key, token_arg)
                 try:
@@ -263,7 +269,7 @@ class PLEXNotifier:
                     logger.log(u'PLEX: Error updating library section for Plex Media Server: ' + ex(e), logger.WARNING)
                     hosts_failed.append(cur_host)
 
-            if len(hosts_match):
+            if hosts_match:
                 logger.log(u'PLEX: Updating hosts where TV section paths match the downloaded show: ' + ', '.join(set(host_list)), logger.DEBUG)
             else:
                 logger.log(u'PLEX: Updating all hosts with TV sections: ' + ', '.join(set(host_list)), logger.DEBUG)

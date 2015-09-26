@@ -21,7 +21,6 @@ from __future__ import with_statement
 import time
 import datetime
 import itertools
-import traceback
 import urllib2
 
 import sickbeard
@@ -30,12 +29,12 @@ from sickbeard import db
 from sickbeard import logger
 from sickbeard.common import Quality
 from sickbeard import helpers
-from sickbeard.exceptions import ex
-from sickbeard.exceptions import AuthException
 from sickbeard.rssfeeds import RSSFeeds
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard import encodingKludge as ek
 from sickbeard import show_name_helpers
+from sickrage.helper.encoding import ss
+from sickrage.helper.exceptions import AuthException, ex
+
 
 class CacheDBConnection(db.DBConnection):
     def __init__(self, providerName):
@@ -144,12 +143,11 @@ class TVCache():
         elif sickbeard.PROXY_SETTING:
             logger.log("Using proxy for url: " + url, logger.DEBUG)
             scheme, address = urllib2.splittype(sickbeard.PROXY_SETTING)
-            if not scheme:
-                scheme = 'http'
-                address = 'http://' + sickbeard.PROXY_SETTING
-            else:
-                address = sickbeard.PROXY_SETTING
-            handlers = [urllib2.ProxyHandler({scheme: address})]
+            address = sickbeard.PROXY_SETTING if scheme else 'http://' + sickbeard.PROXY_SETTING
+            handlers = [urllib2.ProxyHandler({'http': address, 'https': address})]
+            self.provider.headers.update({'Referer': address})
+        elif 'Referer' in self.provider.headers:
+            self.provider.headers.pop('Referer')
 
         return RSSFeeds(self.providerID).getFeed(
             self.provider.proxy._buildURL(url),
@@ -232,8 +230,7 @@ class TVCache():
     def shouldUpdate(self):
         # if we've updated recently then skip the update
         if datetime.datetime.today() - self.lastUpdate < datetime.timedelta(minutes=self.minTime):
-            logger.log(u"Last update was too soon, using old cache: today()-" + str(self.lastUpdate) + "<" + str(
-                datetime.timedelta(minutes=self.minTime)), logger.DEBUG)
+            logger.log(u"Last update was too soon, using old cache: " + str(self.lastUpdate) + ". Updated less then " + str(self.minTime) + " minutes ago", logger.DEBUG)
             return False
 
         return True
@@ -256,7 +253,7 @@ class TVCache():
                 showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
 
             try:
-                myParser = NameParser(showObj=showObj, convert=True)
+                myParser = NameParser(showObj=showObj)
                 parse_result = myParser.parse(name)
             except InvalidNameException:
                 logger.log(u"Unable to parse the filename " + name + " into a valid episode", logger.DEBUG)
@@ -282,7 +279,7 @@ class TVCache():
             # get quality of release
             quality = parse_result.quality
 
-            name = ek.ss(name)
+            name = ss(name)
 
             # get release group
             release_group = parse_result.release_group
@@ -366,7 +363,7 @@ class TVCache():
             # if the show says we want that episode then add it to the list
             if not showObj.wantEpisode(curSeason, curEp, curQuality, manualSearch, downCurQuality):
                 logger.log(u"Skipping " + curResult["name"] + " because we don't want an episode that's " +
-                           Quality.qualityStrings[curQuality], logger.DEBUG)
+                           Quality.qualityStrings[curQuality], logger.INFO)
                 continue
 
             epObj = showObj.getEpisode(curSeason, curEp)

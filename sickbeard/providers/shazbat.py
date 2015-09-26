@@ -16,18 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-try:
-    import xml.etree.cElementTree as etree
-except ImportError:
-    import elementtree.ElementTree as etree
-
-import sickbeard
 import generic
 
-from sickbeard.exceptions import ex, AuthException
-from sickbeard import helpers
 from sickbeard import logger
 from sickbeard import tvcache
+from sickrage.helper.exceptions import AuthException
 
 
 class ShazbatProvider(generic.TorrentProvider):
@@ -36,6 +29,7 @@ class ShazbatProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "Shazbat.tv")
 
         self.supportsBacklog = False
+        self.public = False
 
         self.enabled = False
         self.passkey = None
@@ -44,8 +38,9 @@ class ShazbatProvider(generic.TorrentProvider):
 
         self.cache = ShazbatCache(self)
 
-        self.urls = {'base_url': 'http://www.shazbat.tv/'}
-        self.url = self.urls['base_url']
+        self.urls = {'base_url': u'http://www.shazbat.tv/',
+                     'website': u'http://www.shazbat.tv/login',}
+        self.url = self.urls['website']
 
     def isEnabled(self):
         return self.enabled
@@ -82,7 +77,7 @@ class ShazbatCache(tvcache.TVCache):
 
     def _getRSSData(self):
 
-        rss_url = self.provider.url + 'rss/recent?passkey=' + provider.passkey + '&fname=true'
+        rss_url = self.provider.urls['base_url'] + 'rss/recent?passkey=' + provider.passkey + '&fname=true'
         logger.log(self.provider.name + u" cache update URL: " + rss_url, logger.DEBUG)
 
         return self.getRSSFeed(rss_url, items=['entries', 'feed'])

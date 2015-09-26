@@ -1,5 +1,6 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
+# URL: https://sickrage.tv
+# Git: https://github.com/SiCKRAGETV/SickRage.git
 #
 # This file is part of SickRage.
 #
@@ -42,55 +43,71 @@ class GenericQueue(object):
         self.lock = threading.Lock()
 
     def pause(self):
+        """Pauses this queue"""
         logger.log(u"Pausing queue")
         self.min_priority = 999999999999
 
     def unpause(self):
+        """Unpauses this queue"""
         logger.log(u"Unpausing queue")
         self.min_priority = 0
 
     def add_item(self, item):
-        item.added = datetime.datetime.now()
-        self.queue.append(item)
+        """
+        Adds an item to this queue
 
-        return item
+        :param item: Queue object to add
+        :return: item
+        """
+        with self.lock:
+            item.added = datetime.datetime.now()
+            self.queue.append(item)
+
+            return item
 
     def run(self, force=False):
+        """
+        Process items in this queue
 
-        # only start a new task if one isn't already going
-        if self.currentItem is None or not self.currentItem.isAlive():
+        :param force: Force queue processing (currently not implemented)
+        """
+        with self.lock:
+            # only start a new task if one isn't already going
+            if self.currentItem is None or not self.currentItem.isAlive():
 
-            # if the thread is dead then the current item should be finished
-            if self.currentItem:
-                self.currentItem.finish()
-                self.currentItem = None
+                # if the thread is dead then the current item should be finished
+                if self.currentItem:
+                    self.currentItem.finish()
+                    self.currentItem = None
 
-            # if there's something in the queue then run it in a thread and take it out of the queue
-            if len(self.queue) > 0:
+                # if there's something in the queue then run it in a thread and take it out of the queue
+                if len(self.queue) > 0:
 
-                # sort by priority
-                def sorter(x, y):
-                    """
-                    Sorts by priority descending then time ascending
-                    """
-                    if x.priority == y.priority:
-                        if y.added == x.added:
-                            return 0
-                        elif y.added < x.added:
-                            return 1
-                        elif y.added > x.added:
-                            return -1
-                    else:
-                        return y.priority - x.priority
+                    # sort by priority
+                    def sorter(x, y):
+                        """
+                        Sorts by priority descending then time ascending
+                        """
+                        if x.priority == y.priority:
+                            if y.added == x.added:
+                                return 0
+                            elif y.added < x.added:
+                                return 1
+                            elif y.added > x.added:
+                                return -1
+                        else:
+                            return y.priority - x.priority
 
-                self.queue.sort(cmp=sorter)
-                if self.queue[0].priority < self.min_priority:
-                    return
+                    self.queue.sort(cmp=sorter)
+                    if self.queue[0].priority < self.min_priority:
+                        return
 
-                # launch the queue item in a thread
-                self.currentItem = self.queue.pop(0)
-                self.currentItem.name = self.queue_name + '-' + self.currentItem.name
-                self.currentItem.start()
+                    # launch the queue item in a thread
+                    self.currentItem = self.queue.pop(0)
+                    self.currentItem.name = self.queue_name + '-' + self.currentItem.name
+                    self.currentItem.start()
+
+        self.amActive = False
 
 class QueueItem(threading.Thread):
     def __init__(self, name, action_id=0):

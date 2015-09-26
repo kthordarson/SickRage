@@ -17,14 +17,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
-import httplib
-import urllib, urllib2
-import time
+import urllib2
 
 import sickbeard
 from sickbeard import logger
 from sickbeard.common import notifyStrings, NOTIFY_SNATCH, NOTIFY_DOWNLOAD, NOTIFY_SUBTITLE_DOWNLOAD, NOTIFY_GIT_UPDATE, NOTIFY_GIT_UPDATE_TEXT
-from sickbeard.exceptions import ex
 
 class FreeMobileNotifier:
     def test_notify(self, id=None, apiKey=None):
@@ -50,7 +47,7 @@ class FreeMobileNotifier:
 
         # build up the URL and parameters
         msg = msg.strip()
-        msg_quoted = urllib2.quote(title + ": " + msg)
+        msg_quoted = urllib2.quote(title.encode('utf-8') + ": " + msg.encode('utf-8'))
         URL = "https://smsapi.free-mobile.fr/sendmsg?user=" + id + "&pass=" + apiKey + "&msg=" + msg_quoted
         
         req = urllib2.Request(URL)
@@ -75,7 +72,11 @@ class FreeMobileNotifier:
                     message = "Server error. Please retry in few moment."
                     logger.log(message, logger.ERROR)
                     return False, message
-                    
+        except Exception, e:
+                message = u"Error while sending SMS: {0}".format(e)
+                logger.log(message, logger.ERROR)
+                return False, message
+
         message = "Free Mobile SMS successful."
         logger.log(message, logger.INFO)
         return True, message

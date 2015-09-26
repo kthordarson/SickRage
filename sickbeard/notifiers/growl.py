@@ -20,8 +20,8 @@ import socket
 
 import sickbeard
 from sickbeard import logger, common
-from sickbeard.exceptions import ex
-from lib.growl import gntp
+from sickrage.helper.exceptions import ex
+from libgrowl import gntp
 
 
 class GrowlNotifier:
@@ -43,7 +43,7 @@ class GrowlNotifier:
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._sendGrowl(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ": " + lang)
-            
+
     def notify_git_update(self, new_version = "??"):
         if sickbeard.USE_GROWL:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
@@ -178,7 +178,7 @@ class GrowlNotifier:
         register.add_notification(common.notifyStrings[common.NOTIFY_SNATCH], True)
         register.add_notification(common.notifyStrings[common.NOTIFY_DOWNLOAD], True)
         register.add_notification(common.notifyStrings[common.NOTIFY_GIT_UPDATE], True)
-        
+
         if opts['password']:
             register.set_password(opts['password'])
 

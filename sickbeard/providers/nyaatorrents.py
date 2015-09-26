@@ -19,7 +19,6 @@
 import urllib
 import re
 
-import sickbeard
 import generic
 
 from sickbeard import show_name_helpers
@@ -35,6 +34,7 @@ class NyaaProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "NyaaTorrents")
 
         self.supportsBacklog = True
+        self.public = True
         self.supportsAbsoluteNumbering = True
         self.anime_only = True
         self.enabled = False
@@ -61,10 +61,10 @@ class NyaaProvider(generic.TorrentProvider):
         return generic.TorrentProvider.findSearchResults(self, show, episodes, search_mode, manualSearch, downCurQuality)
 
     def _get_season_search_strings(self, ep_obj):
-        return show_name_helpers.makeSceneShowSearchStrings(self.show, anime=True)
+        return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
 
     def _get_episode_search_strings(self, ep_obj, add_string=''):
-        return self._get_season_search_strings(ep_obj)
+        return [x for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]
 
     def _doSearch(self, search_string, search_mode='eponly', epcount=0, age=0, epObj=None):
         if self.show and not self.show.is_anime:

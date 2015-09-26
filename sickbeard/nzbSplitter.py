@@ -1,5 +1,6 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
+# URL: https://sickrage.tv
+# Git: https://github.com/SiCKRAGETV/SickRage.git
 #
 # This file is part of SickRage.
 #
@@ -18,19 +19,31 @@
 
 from __future__ import with_statement
 
-import urllib2
-import xml.etree.cElementTree as etree
-import xml.etree
+import requests
 import re
+
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    import xml.etree.ElementTree as etree
 
 from sickbeard import logger, classes, helpers
 from sickbeard.common import Quality
-from sickbeard import encodingKludge as ek
-from sickbeard.exceptions import ex
+from sickrage.helper.encoding import ek, ss
+from sickrage.helper.exceptions import ex
 
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
+
 def getSeasonNZBs(name, urlData, season):
+    """
+    Split a season NZB into episodes
+
+    :param name: NZB name
+    :param urlData: URL to get data from
+    :param season: Season to check
+    :return: dict of (episode files, xml matches)
+    """
     try:
         showXML = etree.ElementTree(etree.XML(urlData))
     except SyntaxError:
@@ -83,12 +96,18 @@ def createNZBString(fileElements, xmlns):
     for curFile in fileElements:
         rootElement.append(stripNS(curFile, xmlns))
 
-    return xml.etree.ElementTree.tostring(ek.ss(rootElement))
+    return etree.tostring(ss(rootElement))
 
 
 def saveNZB(nzbName, nzbString):
+    """
+    Save NZB to disk
+
+    :param nzbName: Filename/path to write to
+    :param nzbString: Content to write in file
+    """
     try:
-        with ek.ek(open, nzbName + ".nzb", 'w') as nzb_fh:
+        with ek(open, nzbName + ".nzb", 'w') as nzb_fh:
             nzb_fh.write(nzbString)
 
     except EnvironmentError, e:
@@ -104,7 +123,13 @@ def stripNS(element, ns):
 
 
 def splitResult(result):
-    urlData = helpers.getURL(result.url)
+    """
+    Split result into seperate episodes
+
+    :param result: search result object
+    :return: False upon failure, a list of episode objects otherwise
+    """
+    urlData = helpers.getURL(result.url, session=requests.Session())
     if urlData is None:
         logger.log(u"Unable to load url " + result.url + ", can't download season NZB", logger.ERROR)
         return False
@@ -159,7 +184,7 @@ def splitResult(result):
         for epNo in parse_result.episode_numbers:
             if not result.extraInfo[0].wantEpisode(season, epNo, result.quality):
                 logger.log(u"Ignoring result " + newNZB + " because we don't want an episode that is " +
-                           Quality.qualityStrings[result.quality], logger.DEBUG)
+                           Quality.qualityStrings[result.quality], logger.INFO)
                 wantEp = False
                 break
         if not wantEp:

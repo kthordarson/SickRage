@@ -4,6 +4,11 @@
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickRage.
+# DEPRECATION NOTICE: autoProcessTV is deprecated and will be removed
+# from SickRage at 31-10-2015.
+#
+# Please switch to nzbToMedia from Clinton Hall, which is included in 
+# the contrib folder
 #
 # SickRage is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +31,7 @@ import sys
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 
 try:
-    from lib import requests
+    import requests
 except ImportError:
     print ("You need to install python requests library")
     sys.exit(1)

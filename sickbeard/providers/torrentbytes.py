@@ -19,7 +19,6 @@
 import re
 import traceback
 import datetime
-import urlparse
 import sickbeard
 import generic
 import urllib
@@ -30,12 +29,8 @@ from sickbeard import db
 from sickbeard import classes
 from sickbeard import helpers
 from sickbeard import show_name_helpers
-from sickbeard.exceptions import ex
-from sickbeard import clients
-from lib import requests
-from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
-from lib.unidecode import unidecode
+from unidecode import unidecode
 from sickbeard.helpers import sanitizeSceneName
 
 
@@ -46,6 +41,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "TorrentBytes")
 
         self.supportsBacklog = True
+        self.public = False
 
         self.enabled = False
         self.username = None
@@ -85,15 +81,12 @@ class TorrentBytesProvider(generic.TorrentProvider):
                         'login': 'Log in!'
         }
 
-        self.session = requests.Session()
-
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
+        response = self.getURL(self.urls['login'],  post_data=login_params, timeout=30)
+        if not response:
+            logger.log(u'Unable to connect to ' + self.name + ' provider.', logger.ERROR)
             return False
 
-        if re.search('Username or password incorrect', response.text):
+        if re.search('Username or password incorrect', response):
             logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
             return False
 
@@ -139,7 +132,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
                 search_string['Episode'].append(ep_string)
         else:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
+                ep_string = sanitizeSceneName(show_name) + ' ' + \
                             sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
                                                                   'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
 
@@ -202,6 +195,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
                             #Filter unseeded torrent
                             if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
+                                logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(name, seeders, leechers), logger.DEBUG)
                                 continue
 
                             if not title or not download_url:

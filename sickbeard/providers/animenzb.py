@@ -19,15 +19,14 @@
 import urllib
 import datetime
 
-import sickbeard
 import generic
 
-from sickbeard import classes, show_name_helpers, helpers
+from sickbeard import classes
+from sickbeard import show_name_helpers
 
-from sickbeard import exceptions, logger
+from sickbeard import logger
 from sickbeard.common import *
 from sickbeard import tvcache
-from lib.dateutil.parser import parse as parseDate
 
 
 class animenzb(generic.NZBProvider):
@@ -37,6 +36,7 @@ class animenzb(generic.NZBProvider):
         generic.NZBProvider.__init__(self, "AnimeNZB")
 
         self.supportsBacklog = False
+        self.public = True
         self.supportsAbsoluteNumbering = True
         self.anime_only = True
 

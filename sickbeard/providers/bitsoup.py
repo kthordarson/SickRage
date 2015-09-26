@@ -21,9 +21,6 @@ import traceback
 import datetime
 import sickbeard
 import generic
-from lib import requests
-from lib.requests import exceptions
-import urllib
 
 from sickbeard.common import Quality
 from sickbeard import logger
@@ -32,26 +29,27 @@ from sickbeard import db
 from sickbeard import classes
 from sickbeard import helpers
 from sickbeard import show_name_helpers
-from sickbeard.exceptions import ex, AuthException
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.bs4_parser import BS4Parser
-from unidecode import unidecode
+from sickrage.helper.exceptions import AuthException
 
 
 class BitSoupProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, "BitSoup")
 
-        self.urls = {'base_url': 'https://www.bitsoup.me',
-                'login': 'https://www.bitsoup.me/takelogin.php',
-                'detail': 'https://www.bitsoup.me/details.php?id=%s',
-                'search': 'https://www.bitsoup.me/browse.php?search=%s%s',
-                'download': 'https://bitsoup.me/%s',
-        }
+        self.urls = {
+            'base_url': 'https://www.bitsoup.me',
+            'login': 'https://www.bitsoup.me/takelogin.php',
+            'detail': 'https://www.bitsoup.me/details.php?id=%s',
+            'search': 'https://www.bitsoup.me/browse.php',
+            'download': 'https://bitsoup.me/%s',
+            }
 
         self.url = self.urls['base_url']
 
         self.supportsBacklog = True
+        self.public = False
         self.enabled = False
         self.username = None
         self.password = None
@@ -61,7 +59,9 @@ class BitSoupProvider(generic.TorrentProvider):
 
         self.cache = BitSoupCache(self)
 
-        self.categories = "&c42=1&c45=1&c49=1&c7=1"
+        self.search_params = {
+            "c42": 1, "c45": 1, "c49": 1, "c7": 1
+        }
 
     def isEnabled(self):
         return self.enabled
@@ -82,21 +82,18 @@ class BitSoupProvider(generic.TorrentProvider):
 
     def _doLogin(self):
 
-        login_params = {'username': self.username,
-                        'password': self.password,
-                        'ssl': 'yes'
-        }
+        login_params = {
+            'username': self.username,
+            'password': self.password,
+            'ssl': 'yes'
+            }
 
-        if not self.session:
-            self.session = requests.session()
-
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
+        response = self.getURL(self.urls['login'],  post_data=login_params, timeout=30)
+        if not response:
+            logger.log(u'Unable to connect to ' + self.name + ' provider.', logger.ERROR)
             return False
 
-        if re.search('Username or password incorrect', response.text):
+        if re.search('Username or password incorrect', response):
             logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
             return False
 
@@ -142,7 +139,7 @@ class BitSoupProvider(generic.TorrentProvider):
                 search_string['Episode'].append(ep_string)
         else:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
+                ep_string = sanitizeSceneName(show_name) + ' ' + \
                             sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
                                                                   'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
 
@@ -150,7 +147,7 @@ class BitSoupProvider(generic.TorrentProvider):
 
         return [search_string]
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0, epObj=None):
+    def _doSearch(self, search_strings, search_mode='eponly', epcount=0, age=0, epObj=None):
 
         results = []
         items = {'Season': [], 'Episode': [], 'RSS': []}
@@ -158,17 +155,12 @@ class BitSoupProvider(generic.TorrentProvider):
         if not self._doLogin():
             return results
 
-        for mode in search_params.keys():
-            for search_string in search_params[mode]:
+        for mode in search_strings.keys():
+            for search_string in search_strings[mode]:
+                logger.log(u"Search string: " + search_string, logger.DEBUG)
+                self.search_params['search'] = search_string
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                searchURL = self.urls['search'] % (urllib.quote(search_string), self.categories)
-
-                logger.log(u"Search string: " + searchURL, logger.DEBUG)
-
-                data = self.getURL(searchURL)
+                data = self.getURL(self.urls['search'], params=self.search_params)
                 if not data:
                     continue
 
@@ -202,14 +194,14 @@ class BitSoupProvider(generic.TorrentProvider):
                                 continue
 
                             #Filter unseeded torrent
-                            if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
+                            if seeders < self.minseed or leechers < self.minleech:
                                 continue
 
                             if not title or not download_url:
                                 continue
 
                             item = title, download_url, id, seeders, leechers
-                            logger.log(u"Found result: " + title.replace(' ','.') + " (" + searchURL + ")", logger.DEBUG)
+                            logger.log(u"Found result: " + title.replace(' ','.') + " (" + search_string + ")", logger.DEBUG)
 
                             items[mode].append(item)
 
@@ -274,8 +266,8 @@ class BitSoupCache(tvcache.TVCache):
         self.minTime = 20
 
     def _getRSSData(self):
-        search_params = {'RSS': ['']}
-        return {'entries': self.provider._doSearch(search_params)}
+        search_strings = {'RSS': ['']}
+        return {'entries': self.provider._doSearch(search_strings)}
 
 
 provider = BitSoupProvider()

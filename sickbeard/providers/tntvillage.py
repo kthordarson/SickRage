@@ -28,14 +28,11 @@ from sickbeard import db
 from sickbeard import classes
 from sickbeard import helpers
 from sickbeard import show_name_helpers
-from sickbeard.exceptions import ex, AuthException
-from sickbeard import clients
-from lib import requests
-from lib.requests.exceptions import RequestException
 from sickbeard.bs4_parser import BS4Parser
-from lib.unidecode import unidecode
+from unidecode import unidecode
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
+from sickrage.helper.exceptions import AuthException
 
 category_excluded = {
               'Sport' : 22,
@@ -71,6 +68,7 @@ class TNTVillageProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "TNTVillage")
 
         self.supportsBacklog = True
+        self.public = False
 
         self.enabled = False
         self._uid = None
@@ -105,7 +103,7 @@ class TNTVillageProvider(generic.TorrentProvider):
                               'Anime' : 7,
                               'Programmi e Film TV' : 1,
                               'Documentari' : 14,
-                              'All' : 0, 
+                              'All' : 0,
                              }
 
         self.urls = {'base_url' : 'http://forum.tntvillage.scambioetico.org',
@@ -115,6 +113,8 @@ class TNTVillageProvider(generic.TorrentProvider):
             'search_page' : 'http://forum.tntvillage.scambioetico.org/?act=allreleases&st={0}&{1}',
             'download' : 'http://forum.tntvillage.scambioetico.org/index.php?act=Attach&type=post&id=%s',
         }
+
+        self.sub_string = ['sub', 'softsub']
 
         self.url = self.urls['base_url']
 
@@ -146,19 +146,17 @@ class TNTVillageProvider(generic.TorrentProvider):
 
         login_params = {'UserName': self.username,
                         'PassWord': self.password,
-                        'CookieDate': 1,
+                        'CookieDate': 0,
                         'submit': 'Connettiti al Forum',
         }
 
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except RequestException as e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
+        response = self.getURL(self.urls['login'],  post_data=login_params, timeout=30)
+        if not response:
+            logger.log(u'Unable to connect to ' + self.name + ' provider.', logger.ERROR)
             return False
 
-        if re.search('Sono stati riscontrati i seguenti errori', response.text) \
-        or re.search('<title>Connettiti</title>', response.text) \
-        or response.status_code == 401:
+        if re.search('Sono stati riscontrati i seguenti errori', response) \
+        or re.search('<title>Connettiti</title>', response):
             logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
             return False
 
@@ -202,7 +200,7 @@ class TNTVillageProvider(generic.TorrentProvider):
                 search_string['Episode'].append(ep_string)
         else:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
+                ep_string = sanitizeSceneName(show_name) + ' ' + \
                             sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
                                                                   'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
 
@@ -242,7 +240,7 @@ class TNTVillageProvider(generic.TorrentProvider):
         file_quality=''
 
         img_all = (torrent_rows.find_all('td'))[1].find_all('img')
-        
+
         if len(img_all) > 0:
             for img_type in img_all:
                 try:
@@ -289,25 +287,34 @@ class TNTVillageProvider(generic.TorrentProvider):
         else:
             return Quality.UNKNOWN
 
-    def _is_italian(self,torrent_rows):
+    def _is_italian(self, torrent_rows):
 
-        is_italian = 0
+        name = str(torrent_rows.find_all('td')[1].find('b').find('span'))
+        if not name or name is 'None':
+            return False
 
-        span_tag = (torrent_rows.find_all('td'))[1].find('b').find('span')
+        subFound = italian = False
+        for sub in self.sub_string:
+            if re.search(sub, name, re.I):
+                subFound = True
+            else:
+                continue
 
-        name = str(span_tag)
-        name = name.split('sub')[0] 
+            if re.search("ita", name.split(sub)[0], re.I):
+                logger.log(u"Found Italian release", logger.DEBUG)
+                italian = True
+                break
 
-        if re.search("ita", name, re.I):
+        if not subFound and re.search("ita", name, re.I):
             logger.log(u"Found Italian release", logger.DEBUG)
-            is_italian=1
+            italian = True
 
-        return is_italian
+        return italian
 
     def _is_season_pack(self, name):
 
         try:
-            myParser = NameParser(tryIndexers=True, trySceneExceptions=True, convert=True)
+            myParser = NameParser(tryIndexers=True, trySceneExceptions=True)
             parse_result = myParser.parse(name)
         except InvalidNameException:
             logger.log(u"Unable to parse the filename " + str(name) + " into a valid episode", logger.DEBUG)
@@ -352,7 +359,7 @@ class TNTVillageProvider(generic.TorrentProvider):
                 for x in range(0,y):
                     z=x*20
                     if last_page:
-                        break	
+                        break
 
                     if mode != 'RSS':
                         searchURL = (self.urls['search_page'] + '&filter={2}').format(z,self.categories,search_string)
@@ -397,6 +404,7 @@ class TNTVillageProvider(generic.TorrentProvider):
                                     continue
 
                                 if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
+                                    logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(name, seeders, leechers), logger.DEBUG)
                                     continue
 
                                 if not title or not download_url:
@@ -410,11 +418,22 @@ class TNTVillageProvider(generic.TorrentProvider):
                                         break
 
                                 if Quality.nameQuality(title) == Quality.UNKNOWN:
-                                    title += filename_qt 
+                                    title += filename_qt
 
                                 if not self._is_italian(result) and not self.subtitle:
                                     logger.log(u"Subtitled, skipping "  + title + "(" + searchURL + ")", logger.DEBUG)
                                     continue
+
+                                search_show = re.split(r'([Ss][\d{1,2}]+)', search_string)[0]
+                                show_title = search_show
+                                rindex = re.search(r'([Ss][\d{1,2}]+)', title)
+                                if rindex:
+                                    show_title = title[:rindex.start()]
+                                    ep_params = title[rindex.start():]
+                                if show_title.lower() != search_show.lower() and search_show.lower() in show_title.lower():
+                                    new_title = search_show + ep_params
+                                    logger.log(u"WARNING - Changing found title from: " + title + " to: " + new_title, logger.DEBUG)
+                                    title = new_title
 
                                 if self._is_season_pack(title):
                                     title = re.sub(r'([Ee][\d{1,2}\-?]+)', '', title)
