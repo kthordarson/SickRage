@@ -24,21 +24,29 @@ import re
 import uuid
 
 from random import shuffle
+from hachoir_parser import createParser
+from hachoir_metadata import extractMetadata
 
 SPOOF_USER_AGENT = False
 
-# If some provider has an issue with functionality of SR, other than user agents, it's best to come talk to us rather than block.
-# It is no different than us going to a provider if we have questions or issues. Be a team player here.
-# This is disabled, was only added for testing, and has no config.ini or web ui setting. To enable, set SPOOF_USER_AGENT = True
+# If some provider has an issue with functionality of SR, other than user agents,
+# it's best to come talk to us rather than block.
+# It is no different than us going to a provider
+# if we have questions or issues. Be a team player here.
+# This is disabled, was only added for testing,
+# and has no config.ini or web ui setting. To enable, set SPOOF_USER_AGENT = True
 user_agents = ['Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
-               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36'
+               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) '
+               'Chrome/41.0.2227.1 Safari/537.36'
                'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0'
                'Mozilla/5.0 (X11; Linux i586; rv:31.0) Gecko/20100101 Firefox/31.0'
-               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A'
-               'Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25'
+               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) '
+               'Version/7.0.3 Safari/7046A194A'
+               'Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko)'
+               ' Version/6.0 Mobile/10A5355d Safari/8536.25'
                'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko'
                'Mozilla/5.0 (compatible, MSIE 11, Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'
-              ]
+               ]
 
 INSTANCE_ID = str(uuid.uuid1())
 USER_AGENT = ('SickRage/(' + platform.system() + '; ' + platform.release() + '; ' + INSTANCE_ID + ')')
@@ -58,27 +66,24 @@ subtitleExtensions = ['srt', 'sub', 'ass', 'idx', 'ssa']
 cpu_presets = {'HIGH': 5,
                'NORMAL': 2,
                'LOW': 1
-              }
+               }
 
-### Other constants
+# Other constants
 MULTI_EP_RESULT = -1
 SEASON_RESULT = -2
 
-### Notification Types
+# Notification Types
 NOTIFY_SNATCH = 1
 NOTIFY_DOWNLOAD = 2
 NOTIFY_SUBTITLE_DOWNLOAD = 3
 NOTIFY_GIT_UPDATE = 4
 NOTIFY_GIT_UPDATE_TEXT = 5
 
-notifyStrings = {}
-notifyStrings[NOTIFY_SNATCH] = "Started Download"
-notifyStrings[NOTIFY_DOWNLOAD] = "Download Finished"
-notifyStrings[NOTIFY_SUBTITLE_DOWNLOAD] = "Subtitle Download Finished"
-notifyStrings[NOTIFY_GIT_UPDATE] = "SickRage Updated"
-notifyStrings[NOTIFY_GIT_UPDATE_TEXT] = "SickRage Updated To Commit#: "
+notifyStrings = {NOTIFY_SNATCH: "Started Download", NOTIFY_DOWNLOAD: "Download Finished",
+                 NOTIFY_SUBTITLE_DOWNLOAD: "Subtitle Download Finished", NOTIFY_GIT_UPDATE: "SickRage Updated",
+                 NOTIFY_GIT_UPDATE_TEXT: "SickRage Updated To Commit#: "}
 
-### Episode statuses
+# Episode statuses
 UNKNOWN = -1  # should never happen
 UNAIRED = 1  # episodes that haven't aired yet
 SNATCHED = 2  # qualified with quality
@@ -89,7 +94,7 @@ ARCHIVED = 6  # episodes that you don't have locally (counts toward download com
 IGNORED = 7  # episodes that you don't want included in your download stats
 SNATCHED_PROPER = 9  # qualified with quality
 SUBTITLED = 10  # qualified with quality
-FAILED = 11  #episode downloaded or snatched we don't want
+FAILED = 11  # episode downloaded or snatched we don't want
 SNATCHED_BEST = 12  # episode redownloaded using best quality
 
 NAMING_REPEAT = 1
@@ -99,16 +104,16 @@ NAMING_LIMITED_EXTEND = 8
 NAMING_SEPARATED_REPEAT = 16
 NAMING_LIMITED_EXTEND_E_PREFIXED = 32
 
-multiEpStrings = {}
-multiEpStrings[NAMING_REPEAT] = "Repeat"
-multiEpStrings[NAMING_SEPARATED_REPEAT] = "Repeat (Separated)"
-multiEpStrings[NAMING_DUPLICATE] = "Duplicate"
-multiEpStrings[NAMING_EXTEND] = "Extend"
-multiEpStrings[NAMING_LIMITED_EXTEND] = "Extend (Limited)"
-multiEpStrings[NAMING_LIMITED_EXTEND_E_PREFIXED] = "Extend (Limited, E-prefixed)"
+multiEpStrings = {NAMING_REPEAT: "Repeat", NAMING_SEPARATED_REPEAT: "Repeat (Separated)", NAMING_DUPLICATE: "Duplicate",
+                  NAMING_EXTEND: "Extend", NAMING_LIMITED_EXTEND: "Extend (Limited)",
+                  NAMING_LIMITED_EXTEND_E_PREFIXED: "Extend (Limited, E-prefixed)"}
+
 
 # pylint: disable=W0232,C1001
 class Quality:
+    def __init__(self):
+        pass
+
     NONE = 0  # 0
     SDTV = 1  # 1
     SDDVD = 1 << 1  # 2
@@ -163,6 +168,7 @@ class Quality:
                       FAILED: "Failed",
                       SNATCHED_BEST: "Snatched (Best)",
                       ARCHIVED: "Archived"}
+
     @staticmethod
     def _getStatusStrings(status):
         """
@@ -197,7 +203,7 @@ class Quality:
             if curQual << 16 & quality:
                 bestQualities.append(curQual)
 
-        return (sorted(anyQualities), sorted(bestQualities))
+        return sorted(anyQualities), sorted(bestQualities)
 
     @staticmethod
     def nameQuality(name, anime=False):
@@ -209,7 +215,7 @@ class Quality:
         :return: Quality prefix
         """
 
-        #Try Scene names first
+        # Try Scene names first
         quality = Quality.sceneQuality(name, anime)
         if quality != Quality.UNKNOWN:
             return quality
@@ -219,7 +225,6 @@ class Quality:
             return quality
 
         return Quality.UNKNOWN
-
 
     @staticmethod
     def sceneQuality(name, anime=False):
@@ -240,6 +245,8 @@ class Quality:
         name = os.path.basename(name)
 
         checkName = lambda list, func: func([re.search(x, name, re.I) for x in list])
+
+        #        checkName = lambda list, func: func([re.search(x, name, re.I) for x in list])
 
         if anime:
             dvdOptions = checkName([r"dvd", r"dvdrip"], any)
@@ -265,15 +272,18 @@ class Quality:
 
             return ret
 
-        if checkName([r"(pdtv|hd.?tv|dsr|tvrip).(xvid|x26[45]|h.?26[45])"], all) and not checkName([r"(720|1080)[pi]"], all) and\
+        if checkName([r"(pdtv|hd.?tv|dsr|tvrip).(xvid|x26[45]|h.?26[45])"], all) and not checkName([r"(720|1080)[pi]"],
+                                                                                                   all) and \
                 not checkName([r"hr.ws.pdtv.x26[45]"], any):
             ret = Quality.SDTV
         elif checkName([r"web.?dl|webrip", r"xvid|x26[45]|h.?26[45]"], all) and not checkName([r"(720|1080)[pi]"], all):
             ret = Quality.SDTV
-        elif checkName([r"(dvdrip|b[rd]rip|blue?-?ray)(.ws)?.(xvid|divx|x26[45])"], any) and not checkName([r"(720|1080)[pi]"], all):
+        elif checkName([r"(dvdrip|b[rd]rip|blue?-?ray)(.ws)?.(xvid|divx|x26[45])"], any) and not checkName(
+                [r"(720|1080)[pi]"], all):
             ret = Quality.SDDVD
-        elif checkName([r"720p", r"hd.?tv", r"x26[45]"], all) or checkName([r"hr.ws.pdtv.x26[45]"], any) and not checkName(
-                [r"1080[pi]"], all):
+        elif checkName([r"720p", r"hd.?tv", r"x26[45]"], all) or checkName([r"hr.ws.pdtv.x26[45]"],
+                                                                           any) and not checkName(
+            [r"1080[pi]"], all):
             ret = Quality.HDTV
         elif checkName([r"720p|1080i", r"hd.?tv", r"mpeg-?2"], all) or checkName([r"1080[pi].hdtv", r"h.?26[45]"], all):
             ret = Quality.RAWHDTV
@@ -317,9 +327,6 @@ class Quality:
         """
 
         # pylint: disable=R0912
-
-        from hachoir_parser import createParser
-        from hachoir_metadata import extractMetadata
 
         try:
             parser = createParser(filename)
@@ -366,7 +373,7 @@ class Quality:
         ret = Quality.UNKNOWN
         if height > 1000:
             ret = ((Quality.FULLHDTV, Quality.FULLHDBLURAY)[bluray], Quality.FULLHDWEBDL)[webdl]
-        elif height > 680 and height < 800:
+        elif 680 < height < 800:
             ret = ((Quality.HDTV, Quality.HDBLURAY)[bluray], Quality.HDWEBDL)[webdl]
         elif height < 680:
             ret = (Quality.SDTV, Quality.SDDVD)[re.search(r'dvd|b[rd]rip|blue?-?ray', base_filename, re.I) is not None]
@@ -385,13 +392,13 @@ class Quality:
     def splitCompositeStatus(status):
         """Returns a tuple containing (status, quality)"""
         if status == UNKNOWN:
-            return (UNKNOWN, Quality.UNKNOWN)
+            return UNKNOWN, Quality.UNKNOWN
 
         for q in sorted(Quality.qualityStrings.keys(), reverse=True):
             if status > q * 100:
-                return (status - q * 100, q)
+                return status - q * 100, q
 
-        return (status, Quality.NONE)
+        return status, Quality.NONE
 
     @staticmethod
     def statusFromName(name, assume=True, anime=False):
@@ -414,6 +421,7 @@ class Quality:
     FAILED = None
     SNATCHED_BEST = None
     ARCHIVED = None
+
 
 Quality.DOWNLOADED = [Quality.compositeStatus(DOWNLOADED, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED = [Quality.compositeStatus(SNATCHED, x) for x in Quality.qualityStrings.keys()]
@@ -461,7 +469,8 @@ class StatusStrings:
 
     def __getitem__(self, key):
         key = int(key)
-        if key in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.ARCHIVED:
+        if key in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + \
+                Quality.SNATCHED_BEST + Quality.ARCHIVED:
             status, quality = Quality.splitCompositeStatus(key)
             if quality == Quality.NONE:
                 return self.statusStrings[status]
@@ -470,18 +479,23 @@ class StatusStrings:
         else:
             return self.statusStrings[key] if self.statusStrings.has_key(key) else ''
 
+    # noinspection PyPep8
     def has_key(self, key):
         key = int(key)
-        return key in self.statusStrings or key in Quality.DOWNLOADED + Quality.ARCHIVED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
+        return key in self.statusStrings or key in Quality.DOWNLOADED + Quality.ARCHIVED + Quality.SNATCHED + \
+                                                   Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
 
     def __contains__(self, key):
         return self.has_key(key)
+
 
 statusStrings = StatusStrings()
 
 
 # pylint: disable=R0903,C1001
 class Overview:
+    def __init__(self):
+        pass
 
     UNAIRED = UNAIRED  # 1
     QUAL = 2
@@ -507,4 +521,4 @@ XML_NSMAP = {'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
 countryList = {'Australia': 'AU',
                'Canada': 'CA',
                'USA': 'US'
-              }
+               }

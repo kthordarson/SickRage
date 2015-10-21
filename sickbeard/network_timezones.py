@@ -93,8 +93,8 @@ def _update_zoneinfo():
         # Filename and hash of new zoneinfo
         (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
     except Exception as e:
-        logger.log(u'Loading zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' %
-                url_zv, logger.WARNING)
+        #logger.log(u'Loading zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' %
+        #       url_zv, logger.WARNING)
         return
 
     if (cur_zoneinfo is not None) and (new_zoneinfo == cur_zoneinfo):
@@ -154,8 +154,8 @@ def update_network_dict():
     url = 'http://sickragetv.github.io/sb_network_timezones/network_timezones.txt'
     url_data = helpers.getURL(url, session=requests.Session())
     if url_data is None:
-        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
-        load_network_dict()
+#        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
+#        load_network_dict()
         return
 
     d = {}

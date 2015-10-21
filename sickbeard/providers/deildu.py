@@ -27,7 +27,7 @@ from sickbeard import tvcache
 from sickbeard import show_name_helpers
 from sickbeard import helpers
 from sickbeard.common import Overview
-from sickbeard.exceptions import ex
+#from sickbeard.exceptions import ex
 from lib import requests
 from bs4 import BeautifulSoup
 

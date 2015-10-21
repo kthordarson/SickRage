@@ -1636,21 +1636,21 @@ def getURL(url, post_data=None, params={}, headers={}, timeout=30, session=None,
                     return None
 
     except requests.exceptions.HTTPError as e:
-        logger.log(u"HTTP error in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
+        #logger.log(u"HTTP error in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
         return None
     except requests.exceptions.ConnectionError as e:
-        logger.log(u"Connection error to getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
+        #logger.log(u"Connection error to getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
         return None
     except requests.exceptions.Timeout as e:
-        logger.log(u"Connection timed out accessing getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
+        #logger.log(u"Connection timed out accessing getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
         return None
     except requests.exceptions.ContentDecodingError:
-        logger.log(u"Content-Encoding was gzip, but content was not compressed. getURL: %s" % url, logger.DEBUG)
-        logger.log(traceback.format_exc(), logger.DEBUG)
+        #logger.log(u"Content-Encoding was gzip, but content was not compressed. getURL: %s" % url, logger.DEBUG)
+        #logger.log(traceback.format_exc(), logger.DEBUG)
         return None
     except Exception as e:
-        logger.log(u"Unknown exception in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
-        logger.log(traceback.format_exc(), logger.WARNING)
+        #logger.log(u"Unknown exception in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
+        #logger.log(traceback.format_exc(), logger.WARNING)
         return None
 
     attempts = 0
