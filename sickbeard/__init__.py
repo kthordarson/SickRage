@@ -46,7 +46,7 @@ from sickbeard.providers import btn, newznab, womble, thepiratebay, torrentleech
 #    freshontv, morethantv, bitsoup, t411, tokyotoshokan, shazbat, rarbg, alpharatio, tntvillage, binsearch, scenetime, deildu
 #=======
 
->>>>>>> sickrage/develop
+#>>>>>>> sickrage/develop
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
