@@ -4,15 +4,9 @@
     from sickbeard import clients
 %>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/configSearch.js?${sbPID}"></script>
-<script type="text/javascript" src="${sbRoot}/js/config.js?${sbPID}"></script>
-<script type="text/javascript" charset="utf-8">
-    $('#config-components').tabs();
-    $('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
-    $('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
-    $('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
-    $('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
-</script>
+<script type="text/javascript" src="${srRoot}/js/configSearch.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/config.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/new/config_search.js"></script>
 </%block>
 <%block name="content">
 % if not header is UNDEFINED:
@@ -38,7 +32,7 @@
 
                     <div class="component-group-desc">
                         <h3>Episode Search</h3>
-                        <p>How to manage searching with <a href="${sbRoot}/config/providers">providers</a>.</p>
+                        <p>How to manage searching with <a href="${srRoot}/config/providers">providers</a>.</p>
                     </div>
 
                     <fieldset class="component-group-list">
@@ -125,6 +119,19 @@
                                     <input type="text" name="require_words" value="${sickbeard.REQUIRE_WORDS}" class="form-control input-sm input350" />
                                     <div class="clear-left">results with no word from this list will be ignored<br />
                                     separate words with a comma, e.g. "word1,word2,word3"
+                                    </div>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="field-pair">
+                            <label>
+                                <span class="component-title">Ignore language names in subbed results</span>
+                                <span class="component-desc">
+                                    <input type="text" name="ignored_subs_list" value="${sickbeard.IGNORED_SUBS_LIST}" class="form-control input-sm input350" />
+                                    <div class="clear-left">Ignore subbed releases based on language names <br />
+                                    Example: "dk" will ignore words: dksub, dksubs, dksubbed, dksubed <br />
+                                    separate languages with a comma, e.g. "lang1,lang2,lang3
                                     </div>
                                 </span>
                             </label>

@@ -29,9 +29,8 @@ class ShazbatProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "Shazbat.tv")
 
         self.supportsBacklog = False
-        self.public = False
 
-        self.enabled = False
+
         self.passkey = None
         self.ratio = None
         self.options = None
@@ -45,9 +44,6 @@ class ShazbatProvider(generic.TorrentProvider):
     def isEnabled(self):
         return self.enabled
 
-    def imageName(self):
-        return 'shazbat.png'
-
     def _checkAuth(self):
         if not self.passkey:
             raise AuthException("Your authentication credentials for " + self.name + " are missing, check your config.")
@@ -58,9 +54,7 @@ class ShazbatProvider(generic.TorrentProvider):
         if not self.passkey:
             self._checkAuth()
         elif not (data['entries'] and data['feed']):
-            logger.log(u"Incorrect authentication credentials for " + self.name, logger.DEBUG)
-            raise AuthException(
-                u"Your authentication credentials for " + self.name + " are incorrect, check your config")
+            logger.log(u"Invalid username or password. Check your settings", logger.WARNING)
 
         return True
 
@@ -69,8 +63,8 @@ class ShazbatProvider(generic.TorrentProvider):
 
 
 class ShazbatCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, provider_obj):
+        tvcache.TVCache.__init__(self, provider_obj)
 
         # only poll Shazbat feed every 15 minutes max
         self.minTime = 15
@@ -78,7 +72,7 @@ class ShazbatCache(tvcache.TVCache):
     def _getRSSData(self):
 
         rss_url = self.provider.urls['base_url'] + 'rss/recent?passkey=' + provider.passkey + '&fname=true'
-        logger.log(self.provider.name + u" cache update URL: " + rss_url, logger.DEBUG)
+        logger.log(u"Cache update URL: %s" % rss_url, logger.DEBUG)
 
         return self.getRSSFeed(rss_url, items=['entries', 'feed'])
 

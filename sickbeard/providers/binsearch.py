@@ -26,7 +26,7 @@ from sickbeard import tvcache
 class BinSearchProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, "BinSearch")
-        self.enabled = False
+
         self.public = True
         self.cache = BinSearchCache(self)
         self.urls = {'base_url': 'https://www.binsearch.info/'}
@@ -36,8 +36,8 @@ class BinSearchProvider(generic.NZBProvider):
         return self.enabled
 
 class BinSearchCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, provider_obj):
+        tvcache.TVCache.__init__(self, provider_obj)
         # only poll Binsearch every 30 minutes max
         self.minTime = 30
 
@@ -100,7 +100,7 @@ class BinSearchCache(tvcache.TVCache):
 
             url += urllib.urlencode(urlArgs)
 
-            logger.log(u"BinSearch cache update URL: " + url, logger.DEBUG)
+            logger.log(u"Cache update URL: %s " % url, logger.DEBUG)
 
             for item in self.getRSSFeed(url)['entries'] or []:
                 ci = self._parseItem(item)

@@ -11,7 +11,6 @@
     myDB = db.DBConnection()
     today = str(datetime.date.today().toordinal())
     layout = sickbeard.HOME_LAYOUT
-    fuzzydate = 'airdate'
 
     status_quality  = '(' + ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER]) + ')'
     status_download = '(' + ','.join([str(x) for x in Quality.DOWNLOADED + Quality.ARCHIVED]) + ')'
@@ -41,22 +40,10 @@
     max_download_count = max_download_count * 100
 %>
 <%block name="metas">
-<meta data-var="sickbeard.SORT_ARTICLE" data-content="${sickbeard.SORT_ARTICLE}">
-<meta data-var="sickbeard.FILTER_ROW" data-content="${sickbeard.FILTER_ROW}">
-<meta data-var="sickbeard.ANIME_SPLIT_HOME" data-content="${sickbeard.ANIME_SPLIT_HOME}">
-<meta data-var="sickbeard.POSTER_SORTBY" data-content="${sickbeard.POSTER_SORTBY}">
-<meta data-var="sickbeard.POSTER_SORTDIR" data-content="${sickbeard.POSTER_SORTDIR}">
-<meta data-var="sickbeard.FUZZY_DATING" data-content="${sickbeard.FUZZY_DATING}">
-<meta data-var="sickbeard.DATE_PRESET" data-content="${sickbeard.DATE_PRESET}">
-<meta data-var="sickbeard.TIME_PRESET" data-content="${sickbeard.TIME_PRESET}">
-<meta data-var="sickbeard.TRIM_ZERO" data-content="${sickbeard.TRIM_ZERO}">
 <meta data-var="max_download_count" data-content="${max_download_count}">
-<meta data-var="layout" data-content="${layout}">
-<meta data-var="fuzzydate" data-content="${fuzzydate}">
 </%block>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/lib/jquery.timeago.js"></script>
-<script type="text/javascript" src="${sbRoot}/js/new/home.js"></script>
+<script type="text/javascript" src="${srRoot}/js/new/home.js?${sbPID}"></script>
 </%block>
 <%block name="content">
 <%namespace file="/inc_defs.mako" import="renderQualityPill"/>
@@ -68,14 +55,14 @@
 
 <div id="HomeLayout" class="pull-right hidden-print" style="margin-top: -40px;">
     % if layout != 'poster':
-        <button id="popover" type="button" class="btn btn-inline">Select Column <b class="caret"></b></button>
+        <button id="popover" type="button" class="btn btn-inline">Select Columns <b class="caret"></b></button>
     % endif
     <span> Layout:
         <select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-            <option value="${sbRoot}/setHomeLayout/?layout=poster" ${('', 'selected="selected"')[layout == 'poster']}>Poster</option>
-            <option value="${sbRoot}/setHomeLayout/?layout=small" ${('', 'selected="selected"')[layout == 'small']}>Small Poster</option>
-            <option value="${sbRoot}/setHomeLayout/?layout=banner" ${('', 'selected="selected"')[layout == 'banner']}>Banner</option>
-            <option value="${sbRoot}/setHomeLayout/?layout=simple" ${('', 'selected="selected"')[layout == 'simple']}>Simple</option>
+            <option value="${srRoot}/setHomeLayout/?layout=poster" ${('', 'selected="selected"')[layout == 'poster']}>Poster</option>
+            <option value="${srRoot}/setHomeLayout/?layout=small" ${('', 'selected="selected"')[layout == 'small']}>Small Poster</option>
+            <option value="${srRoot}/setHomeLayout/?layout=banner" ${('', 'selected="selected"')[layout == 'banner']}>Banner</option>
+            <option value="${srRoot}/setHomeLayout/?layout=simple" ${('', 'selected="selected"')[layout == 'simple']}>Simple</option>
         </select>
         % if layout != 'poster':
         Search:
@@ -88,17 +75,17 @@
     &nbsp;
     <span> Sort By:
         <select id="postersort" class="form-control form-control-inline input-sm">
-            <option value="name" data-sort="${sbRoot}/setPosterSortBy/?sort=name" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'name']}>Name</option>
-            <option value="date" data-sort="${sbRoot}/setPosterSortBy/?sort=date" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'date']}>Next Episode</option>
-            <option value="network" data-sort="${sbRoot}/setPosterSortBy/?sort=network" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'network']}>Network</option>
-            <option value="progress" data-sort="${sbRoot}/setPosterSortBy/?sort=progress" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'progress']}>Progress</option>
+            <option value="name" data-sort="${srRoot}/setPosterSortBy/?sort=name" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'name']}>Name</option>
+            <option value="date" data-sort="${srRoot}/setPosterSortBy/?sort=date" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'date']}>Next Episode</option>
+            <option value="network" data-sort="${srRoot}/setPosterSortBy/?sort=network" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'network']}>Network</option>
+            <option value="progress" data-sort="${srRoot}/setPosterSortBy/?sort=progress" ${('', 'selected="selected"')[sickbeard.POSTER_SORTBY == 'progress']}>Progress</option>
         </select>
     </span>
     &nbsp;
     <span> Sort Order:
         <select id="postersortdirection" class="form-control form-control-inline input-sm">
-            <option value="true" data-sort="${sbRoot}/setPosterSortDir/?direction=1" ${('', 'selected="selected"')[sickbeard.POSTER_SORTDIR == 1]}>Asc</option>
-            <option value="false" data-sort="${sbRoot}/setPosterSortDir/?direction=0" ${('', 'selected="selected"')[sickbeard.POSTER_SORTDIR == 0]}>Desc</option>
+            <option value="true" data-sort="${srRoot}/setPosterSortDir/?direction=1" ${('', 'selected="selected"')[sickbeard.POSTER_SORTDIR == 1]}>Asc</option>
+            <option value="false" data-sort="${srRoot}/setPosterSortDir/?direction=0" ${('', 'selected="selected"')[sickbeard.POSTER_SORTDIR == 0]}>Desc</option>
         </select>
     </span>
     &nbsp;
@@ -118,7 +105,7 @@
 % for curLoadingShow in sickbeard.showQueueScheduler.action.loadingShowList:
     % if curLoadingShow.show == None:
         <div class="show" data-name="0" data-date="010101" data-network="0" data-progress="101">
-            <img alt="" title="${curLoadingShow.show_name}" class="show-image" style="border-bottom: 1px solid #111;" src="${sbRoot}/images/poster.png" />
+            <img alt="" title="${curLoadingShow.show_name}" class="show-image" style="border-bottom: 1px solid #111;" src="${srRoot}/images/poster.png" />
             <div class="show-details">
                 <div class="show-add">Loading... (${curLoadingShow.show_name})</div>
             </div>
@@ -192,7 +179,7 @@
 %>
     <div class="show" id="show${curShow.indexerid}" data-name="${curShow.name}" data-date="${data_date}" data-network="${curShow.network}" data-progress="${progressbar_percent}">
         <div class="show-image">
-            <a href="${sbRoot}/home/displayShow?show=${curShow.indexerid}"><img alt="" class="show-image" src="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=poster_thumb" /></a>
+            <a href="${srRoot}/home/displayShow?show=${curShow.indexerid}"><img alt="" class="show-image" src="${srRoot}/showPoster/?show=${curShow.indexerid}&amp;which=poster_thumb" /></a>
         </div>
 
         <div class="progressbar hidden-print" style="position:relative;" data-show-id="${curShow.indexerid}" data-progress-percentage="${progressbar_percent}"></div>
@@ -204,7 +191,6 @@
         <div class="show-date">
 % if cur_airs_next:
     <% ldatetime = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(cur_airs_next, curShow.airs, curShow.network)) %>
-    <span class="${fuzzydate}">
     <%
         try:
             out = str(sbdatetime.sbdatetime.sbfdate(ldatetime))
@@ -213,7 +199,6 @@
             pass
     %>
         ${out}
-    </span>
 % else:
     <%
     output_html = '?'
@@ -237,9 +222,9 @@
                 <td class="show-table">
                     % if layout != 'simple':
                         % if curShow.network:
-                            <span title="${curShow.network}"><img class="show-network-image" src="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=network" alt="${curShow.network}" title="${curShow.network}" /></span>
+                            <span title="${curShow.network}"><img class="show-network-image" src="${srRoot}/showPoster/?show=${curShow.indexerid}&amp;which=network" alt="${curShow.network}" title="${curShow.network}" /></span>
                         % else:
-                            <span title="No Network"><img class="show-network-image" src="${sbRoot}/images/network/nonetwork.png" alt="No Network" title="No Network" /></span>
+                            <span title="No Network"><img class="show-network-image" src="${srRoot}/images/network/nonetwork.png" alt="No Network" title="No Network" /></span>
                         % endif
                     % else:
                         <span title="${curShow.network}">${curShow.network}</span>
@@ -278,7 +263,7 @@
 
     <tfoot class="hidden-print">
         <tr>
-            <th rowspan="1" colspan="1" align="center"><a href="${sbRoot}/home/addShows/">Add ${('Show', 'Anime')[curListType == 'Anime']}</a></th>
+            <th rowspan="1" colspan="1" align="center"><a href="${srRoot}/home/addShows/">Add ${('Show', 'Anime')[curListType == 'Anime']}</a></th>
             <th>&nbsp;</th>
             <th>&nbsp;</th>
             <th>&nbsp;</th>
@@ -367,15 +352,10 @@
 %>
     <tr>
     % if cur_airs_next:
-        <% ldatetime = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(cur_airs_next, curShow.airs, curShow.network)) %>
+        <% airDate = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(cur_airs_next, curShow.airs, curShow.network)) %>
         % try:
-            <% temp_sbfdate_next = sbdatetime.sbdatetime.sbfdate(ldatetime) %>
-            <% temp_timegm_next = calendar.timegm(ldatetime.timetuple()) %>
             <td align="center" class="nowrap">
-                <div class="${fuzzydate}">
-                    <time datetime="${ldatetime.isoformat('T')}" class="date">${temp_sbfdate_next}</time>
-                </div>
-                <span class="sort_data">${temp_timegm_next}</span>
+                <time datetime="${airDate.isoformat('T')}" class="date">${sbdatetime.sbdatetime.sbfdate(airDate)}</time>
             </td>
         % except ValueError:
             <td align="center" class="nowrap"></td>
@@ -385,15 +365,10 @@
     % endif
 
     % if cur_airs_prev:
-        <% pdatetime = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(cur_airs_prev, curShow.airs, curShow.network)) %>
+        <% airDate = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(cur_airs_prev, curShow.airs, curShow.network)) %>
         % try:
-            <% temp_sbfdate_prev = sbdatetime.sbdatetime.sbfdate(pdatetime) %>
-            <% temp_timegm_prev = calendar.timegm(pdatetime.timetuple()) %>
             <td align="center" class="nowrap">
-                <div class="${fuzzydate}">
-                    <time datetime="${pdatetime.isoformat('T')}" class="date">${temp_sbfdate_prev}</time>
-                </div>
-                <span class="sort_data">${temp_timegm_prev}</span>
+                <time datetime="${airDate.isoformat('T')}" class="date">${sbdatetime.sbdatetime.sbfdate(airDate)}</time>
             </td>
         % except ValueError:
             <td align="center" class="nowrap"></td>
@@ -405,31 +380,31 @@
     % if layout == 'small':
         <td class="tvShow">
             <div class="imgsmallposter ${layout}">
-                <a href="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=${layout}" rel="dialog" title="${curShow.name}">
-                    <img src="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=poster_thumb" class="${layout}" alt="${curShow.indexerid}"/>
+                <a href="${srRoot}/home/displayShow?show=${curShow.indexerid}" title="${curShow.name}">
+                    <img src="${srRoot}/showPoster/?show=${curShow.indexerid}&amp;which=poster_thumb" class="${layout}" alt="${curShow.indexerid}"/>
                 </a>
-                <a href="${sbRoot}/home/displayShow?show=${curShow.indexerid}" style="vertical-align: middle;">${curShow.name}</a>
+                <a href="${srRoot}/home/displayShow?show=${curShow.indexerid}" style="vertical-align: middle;">${curShow.name}</a>
             </div>
         </td>
     % elif layout == 'banner':
         <td>
             <span style="display: none;">${curShow.name}</span>
             <div class="imgbanner ${layout}">
-                <a href="${sbRoot}/home/displayShow?show=${curShow.indexerid}">
-                <img src="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=banner" class="${layout}" alt="${curShow.indexerid}" title="${curShow.name}"/>
+                <a href="${srRoot}/home/displayShow?show=${curShow.indexerid}">
+                <img src="${srRoot}/showPoster/?show=${curShow.indexerid}&amp;which=banner" class="${layout}" alt="${curShow.indexerid}" title="${curShow.name}"/>
             </div>
         </td>
     % elif layout == 'simple':
-        <td class="tvShow"><a href="${sbRoot}/home/displayShow?show=${curShow.indexerid}">${curShow.name}</a></td>
+        <td class="tvShow"><a href="${srRoot}/home/displayShow?show=${curShow.indexerid}">${curShow.name}</a></td>
     % endif
 
     % if layout != 'simple':
         <td align="center">
         % if curShow.network:
-            <span title="${curShow.network}" class="hidden-print"><img id="network" width="54" height="27" src="${sbRoot}/showPoster/?show=${curShow.indexerid}&amp;which=network" alt="${curShow.network}" title="${curShow.network}" /></span>
+            <span title="${curShow.network}" class="hidden-print"><img id="network" width="54" height="27" src="${srRoot}/showPoster/?show=${curShow.indexerid}&amp;which=network" alt="${curShow.network}" title="${curShow.network}" /></span>
             <span class="visible-print-inline">${curShow.network}</span>
         % else:
-            <span title="No Network" class="hidden-print"><img id="network" width="54" height="27" src="${sbRoot}/images/network/nonetwork.png" alt="No Network" title="No Network" /></span>
+            <span title="No Network" class="hidden-print"><img id="network" width="54" height="27" src="${srRoot}/images/network/nonetwork.png" alt="No Network" title="No Network" /></span>
             <span class="visible-print-inline">No Network</span>
         % endif
         </td>
@@ -453,7 +428,7 @@
 
         <td align="center">
             <% paused = int(curShow.paused) == 0 and curShow.status == 'Continuing' %>
-            <img src="${sbRoot}/images/${('no16.png', 'yes16.png')[bool(paused)]}" alt="${('No', 'Yes')[bool(paused)]}" width="16" height="16" />
+            <img src="${srRoot}/images/${('no16.png', 'yes16.png')[bool(paused)]}" alt="${('No', 'Yes')[bool(paused)]}" width="16" height="16" />
         </td>
 
         <td align="center">

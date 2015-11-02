@@ -11,8 +11,8 @@
     from sickbeard.metadata.generic import GenericMetadata
 %>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/configBackupRestore.js?${sbPID}"></script>
-<script type="text/javascript" src="${sbRoot}/js/new/config_backuprestore.js"></script>
+<script type="text/javascript" src="${srRoot}/js/configBackupRestore.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/new/config_backuprestore.js"></script>
 </%block>
 <%block name="content">
 % if not header is UNDEFINED:
@@ -25,9 +25,6 @@
 % if sickbeard.INDEXER_DEFAULT:
     <% indexer = sickbeard.INDEXER_DEFAULT %>
 % endif
-
-<script type="text/javascript" src="${sbRoot}/js/config.js?${sbPID}"></script>
-
 <div id="config">
     <div id="config-content">
 

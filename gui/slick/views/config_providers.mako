@@ -7,8 +7,8 @@
 
 %>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/configProviders.js?${sbPID}"></script>
-<script type="text/javascript" src="${sbRoot}/js/config.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/configProviders.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/config.js?${sbPID}"></script>
 <script type="text/javascript">
 $(document).ready(function(){
     % if sickbeard.USE_NZBS:
@@ -57,7 +57,7 @@ $('#config-components').tabs();
                         <p>At least one provider is required but two are recommended.</p>
 
                         % if not sickbeard.USE_NZBS or not sickbeard.USE_TORRENTS:
-                        <blockquote style="margin: 20px 0;">NZB/Torrent providers can be toggled in <b><a href="${sbRoot}/config/search">Search Settings</a></b></blockquote>
+                        <blockquote style="margin: 20px 0;">NZB/Torrent providers can be toggled in <b><a href="${srRoot}/config/search">Search Settings</a></b></blockquote>
                         % else:
                         <br/>
                         % endif
@@ -81,7 +81,7 @@ $('#config-components').tabs();
                             %>
                             <li class="ui-state-default ${('nzb-provider', 'torrent-provider')[bool(curProvider.providerType == "torrent")]}" id="${curName}">
                                 <input type="checkbox" id="enable_${curName}" class="provider_enabler" ${('', 'checked="checked"')[curProvider.isEnabled() == True]}/>
-                                <a href="${anon_url(curProvider.url)}" class="imgLink" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><img src="${sbRoot}/images/providers/${curProvider.imageName()}" alt="${curProvider.name}" title="${curProvider.name}" width="16" height="16" style="vertical-align:middle;"/></a>
+                                <a href="${anon_url(curProvider.url)}" class="imgLink" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><img src="${srRoot}/images/providers/${curProvider.imageName()}" alt="${curProvider.name}" title="${curProvider.name}" width="16" height="16" style="vertical-align:middle;"/></a>
                                 <span style="vertical-align:middle;">${curProvider.name}</span>
                                 ${('*', '')[bool(curProvider.supportsBacklog)]}
                                 <span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="vertical-align:middle;"></span>
@@ -165,11 +165,11 @@ $('#config-components').tabs();
                         % endif
 
                         % if hasattr(curNewznabProvider, 'enable_backlog'):
-                        <div class="field-pair">
+                        <div class="field-pair${(' hidden', '')[curNewznabProvider.supportsBacklog]}">
                             <label for="${curNewznabProvider.getID()}_enable_backlog">
                                 <span class="component-title">Enable backlog searches</span>
                                 <span class="component-desc">
-                                    <input type="checkbox" name="${curNewznabProvider.getID()}_enable_backlog" id="${curNewznabProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curNewznabProvider.enable_backlog)]}/>
+                                    <input type="checkbox" name="${curNewznabProvider.getID()}_enable_backlog" id="${curNewznabProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curNewznabProvider.enable_backlog and curNewznabProvider.supportsBacklog)]}/>
                                     <p>enable provider to perform backlog searches.</p>
                                 </span>
                             </label>
@@ -252,11 +252,11 @@ $('#config-components').tabs();
                         % endif
 
                         % if hasattr(curNzbProvider, 'enable_backlog'):
-                        <div class="field-pair">
+                        <div class="field-pair${(' hidden', '')[curNzbProvider.supportsBacklog]}">
                             <label for="${curNzbProvider.getID()}_enable_backlog">
                                 <span class="component-title">Enable backlog searches</span>
                                 <span class="component-desc">
-                                    <input type="checkbox" name="${curNzbProvider.getID()}_enable_backlog" id="${curNzbProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curNzbProvider.enable_backlog)]}/>
+                                    <input type="checkbox" name="${curNzbProvider.getID()}_enable_backlog" id="${curNzbProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curNzbProvider.enable_backlog and curNzbProvider.supportsBacklog)]}/>
                                     <p>enable provider to perform backlog searches.</p>
                                 </span>
                             </label>
@@ -368,6 +368,17 @@ $('#config-components').tabs();
                             </label>
                         </div>
                         % endif
+						
+                        % if hasattr(curTorrentProvider, 'pin'):
+                        <div class="field-pair">
+                            <label for="${curTorrentProvider.getID()}_pin">
+                                <span class="component-title">Pin:</span>
+                                <span class="component-desc">
+                                    <input type="password" name="${curTorrentProvider.getID()}_pin" id="${curTorrentProvider.getID()}_pin" value="${curTorrentProvider.pin}" class="form-control input-sm input100" />
+                                </span>
+                            </label>
+                        </div>
+                        % endif
 
                         % if hasattr(curTorrentProvider, 'ratio'):
                         <div class="field-pair">
@@ -427,6 +438,18 @@ $('#config-components').tabs();
                                 <span class="component-desc">
                                     <input type="checkbox" name="${curTorrentProvider.getID()}_ranked" id="${curTorrentProvider.getID()}_ranked" ${('', 'checked="checked"')[bool(curTorrentProvider.ranked)]} />
                                     <p>only download ranked torrents (internal releases)</p>
+                                </span>
+                            </label>
+                        </div>
+                        % endif
+
+                        % if hasattr(curTorrentProvider, 'engrelease'):
+                        <div class="field-pair">
+                            <label for="${curTorrentProvider.getID()}_engrelease">
+                                <span class="component-title">English torrents</span>
+                                <span class="component-desc">
+                                    <input type="checkbox" name="${curTorrentProvider.getID()}_engrelease" id="${curTorrentProvider.getID()}_engrelease" ${('', 'checked="checked"')[bool(curTorrentProvider.engrelease)]} />
+                                    <p>only download english torrents ,or torrents containing english subtitles</p>
                                 </span>
                             </label>
                         </div>
@@ -499,11 +522,11 @@ $('#config-components').tabs();
                         % endif
 
                         % if hasattr(curTorrentProvider, 'enable_backlog'):
-                        <div class="field-pair">
+                        <div class="field-pair${(' hidden', '')[curTorrentProvider.supportsBacklog]}">
                             <label for="${curTorrentProvider.getID()}_enable_backlog">
                                 <span class="component-title">Enable backlog searches</span>
                                 <span class="component-desc">
-                                    <input type="checkbox" name="${curTorrentProvider.getID()}_enable_backlog" id="${curTorrentProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curTorrentProvider.enable_backlog)]}/>
+                                    <input type="checkbox" name="${curTorrentProvider.getID()}_enable_backlog" id="${curTorrentProvider.getID()}_enable_backlog" ${('', 'checked="checked"')[bool(curTorrentProvider.enable_backlog and curTorrentProvider.supportsBacklog)]}/>
                                     <p>enable provider to perform backlog searches.</p>
                                 </span>
                             </label>

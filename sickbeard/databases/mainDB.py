@@ -27,7 +27,7 @@ from sickbeard.name_parser.parser import NameParser, InvalidNameException, Inval
 from sickrage.helper.common import dateTimeFormat
 from sickrage.helper.encoding import ek
 
-from babelfish import language_converters
+from babelfish import language_converters, Language
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
 MAX_DB_VERSION = 42
@@ -46,9 +46,35 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_subtitles_codes()
         self.fix_show_nfo_lang()
         self.convert_tvrage_to_tvdb()
+        self.convert_archived_to_compund()
+
+
+    def convert_archived_to_compund(self):
+        logger.log(u'Checking for archived episodes not qualified', logger.DEBUG)
+
+        query = "SELECT episode_id, showid, status, location, season, episode " + \
+        "FROM tv_episodes WHERE status = %s" % common.ARCHIVED
+
+        sqlResults = self.connection.select(query)
+        if sqlResults:
+            logger.log(u"Found %i shows with bare archived status, attempting automatic conversion..." % len(sqlResults), logger.WARNING)
+
+        for archivedEp in sqlResults:
+            fixedStatus = common.Quality.compositeStatus(common.ARCHIVED, common.Quality.UNKNOWN)
+            existing = archivedEp['location'] and ek(os.path.exists, archivedEp['location'])
+            if existing:
+                quality = common.Quality.assumeQuality(archivedEp['location'])
+                fixedStatus = common.Quality.compositeStatus(common.ARCHIVED, quality)
+
+            logger.log(u'Changing status from %s to %s for %s: S%02dE%02d at %s (File %s)' %
+                (common.statusStrings[common.ARCHIVED], common.statusStrings[fixedStatus],
+                 archivedEp['showid'], archivedEp['season'], archivedEp['episode'],
+                 archivedEp['location'] if archivedEp['location'] else 'unknown location', ('NOT FOUND', 'EXISTS')[bool(existing)]))
+
+            self.connection.action("UPDATE tv_episodes SET status = %i WHERE episode_id = %i" % (fixedStatus, archivedEp['episode_id']))
 
     def convert_tvrage_to_tvdb(self):
-        logger.log(u"Checking for shows with tvrage id's, since tvrage is gone")
+        logger.log(u"Checking for shows with tvrage id's, since tvrage is gone", logger.DEBUG)
         from sickbeard.indexers.indexer_config import INDEXER_TVRAGE
         from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
@@ -241,6 +267,8 @@ class MainSanityCheck(db.DBSanityCheck):
             "SELECT subtitles, episode_id FROM tv_episodes WHERE subtitles != '' AND subtitles_lastsearch < ?;",
                 [datetime.datetime(2015, 7, 15, 17, 20, 44, 326380).strftime(dateTimeFormat)])
 
+        validLanguages = [Language.fromopensubtitles(language).opensubtitles for language in language_converters['opensubtitles'].codes if len(language) == 3]
+
         if not sqlResults:
             return
 
@@ -251,7 +279,7 @@ class MainSanityCheck(db.DBSanityCheck):
                 (sqlResult['episode_id'], sqlResult['subtitles']), logger.DEBUG)
 
             for subcode in sqlResult['subtitles'].split(','):
-                if not len(subcode) is 3 or not subcode in language_converters['opensubtitles'].codes:
+                if not len(subcode) is 3 or not subcode in validLanguages:
                     logger.log("Fixing subtitle codes for episode_id: %s, invalid code: %s" %
                         (sqlResult['episode_id'], subcode), logger.DEBUG)
                     continue

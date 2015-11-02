@@ -1,4 +1,4 @@
-# Author: Idan Gutman
+﻿# Author: Idan Gutman
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickRage.
@@ -17,21 +17,13 @@
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import traceback
-import datetime
-import sickbeard
-import generic
 import urllib
-from sickbeard.common import Quality
+import traceback
+
 from sickbeard import logger
 from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard.providers import generic
 from sickbeard.bs4_parser import BS4Parser
-from unidecode import unidecode
-from sickbeard.helpers import sanitizeSceneName
 
 
 class TorrentBytesProvider(generic.TorrentProvider):
@@ -41,104 +33,47 @@ class TorrentBytesProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "TorrentBytes")
 
         self.supportsBacklog = True
-        self.public = False
 
-        self.enabled = False
         self.username = None
         self.password = None
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
-        self.cache = TorrentBytesCache(self)
+        self.freeleech = False
 
         self.urls = {'base_url': 'https://www.torrentbytes.net',
-                'login': 'https://www.torrentbytes.net/takelogin.php',
-                'detail': 'https://www.torrentbytes.net/details.php?id=%s',
-                'search': 'https://www.torrentbytes.net/browse.php?search=%s%s',
-                'download': 'https://www.torrentbytes.net/download.php?id=%s&name=%s',
-                }
+                     'login': 'https://www.torrentbytes.net/takelogin.php',
+                     'detail': 'https://www.torrentbytes.net/details.php?id=%s',
+                     'search': 'https://www.torrentbytes.net/browse.php?search=%s%s',
+                     'download': 'https://www.torrentbytes.net/download.php?id=%s&name=%s'}
 
         self.url = self.urls['base_url']
 
         self.categories = "&c41=1&c33=1&c38=1&c32=1&c37=1"
 
+        self.proper_strings = ['PROPER', 'REPACK']
+
+        self.cache = TorrentBytesCache(self)
+
     def isEnabled(self):
         return self.enabled
-
-    def imageName(self):
-        return 'torrentbytes.png'
-
-    def getQuality(self, item, anime=False):
-
-        quality = Quality.sceneQuality(item[0], anime)
-        return quality
 
     def _doLogin(self):
 
         login_params = {'username': self.username,
                         'password': self.password,
-                        'login': 'Log in!'
-        }
+                        'login': 'Log in!'}
 
-        response = self.getURL(self.urls['login'],  post_data=login_params, timeout=30)
+        response = self.getURL(self.urls['login'], post_data=login_params, timeout=30)
         if not response:
-            logger.log(u'Unable to connect to ' + self.name + ' provider.', logger.ERROR)
+            logger.log(u"Unable to connect to provider", logger.WARNING)
             return False
 
         if re.search('Username or password incorrect', response):
-            logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+            logger.log(u"Invalid username or password. Check your settings", logger.WARNING)
             return False
 
         return True
-
-    def _get_season_search_strings(self, ep_obj):
-
-        search_string = {'Season': []}
-        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-            if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = show_name + '.' + str(ep_obj.airdate).split('-')[0]
-            elif ep_obj.show.anime:
-                ep_string = show_name + '.' + "%d" % ep_obj.scene_absolute_number
-            else:
-                ep_string = show_name + '.S%02d' % int(ep_obj.scene_season)  #1) showName SXX
-
-            search_string['Season'].append(ep_string)
-
-        return [search_string]
-
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
-
-        search_string = {'Episode': []}
-
-        if not ep_obj:
-            return []
-
-        if self.show.air_by_date:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|')
-                search_string['Episode'].append(ep_string)
-        elif self.show.sports:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|') + '|' + \
-                            ep_obj.airdate.strftime('%b')
-                search_string['Episode'].append(ep_string)
-        elif self.show.anime:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            "%i" % int(ep_obj.scene_absolute_number)
-                search_string['Episode'].append(ep_string)
-        else:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                                  'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
-
-                search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
-
-        return [search_string]
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0, epObj=None):
 
@@ -149,14 +84,14 @@ class TorrentBytesProvider(generic.TorrentProvider):
             return results
 
         for mode in search_params.keys():
+            logger.log(u"Search Mode: %s" % mode, logger.DEBUG)
             for search_string in search_params[mode]:
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                if mode != 'RSS':
+                    logger.log(u"Search string: %s " % search_string, logger.DEBUG)
 
-                searchURL = self.urls['search'] % (urllib.quote(search_string), self.categories)
-
-                logger.log(u"Search string: " + searchURL, logger.DEBUG)
+                searchURL = self.urls['search'] % (urllib.quote(search_string.encode('utf-8')), self.categories)
+                logger.log(u"Search URL: %s" %  searchURL, logger.DEBUG)
 
                 data = self.getURL(searchURL)
                 if not data:
@@ -164,22 +99,32 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
                 try:
                     with BS4Parser(data, features=["html5lib", "permissive"]) as html:
+                        #Continue only if one Release is found
+                        empty = html.find('Nothing found!')
+                        if empty:
+                            logger.log(u"Data returned from provider does not contain any torrents", logger.DEBUG)
+                            continue
+
                         torrent_table = html.find('table', attrs={'border': '1'})
                         torrent_rows = torrent_table.find_all('tr') if torrent_table else []
 
-                        #Continue only if one Release is found
-                        if len(torrent_rows) < 2:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
-                                       logger.DEBUG)
-                            continue
-
                         for result in torrent_rows[1:]:
                             cells = result.find_all('td')
-
+                            size = None
                             link = cells[1].find('a', attrs={'class': 'index'})
 
                             full_id = link['href'].replace('details.php?id=', '')
                             torrent_id = full_id.split("&")[0]
+
+                            #Free leech torrents are marked with green [F L] in the title (i.e. <font color=green>[F&nbsp;L]</font>)
+                            freeleechTag = cells[1].find('font', attrs={'color': 'green'})
+                            if freeleechTag and freeleechTag.text == u'[F\xa0L]':
+                                isFreeleechTorrent = True
+                            else:
+                                isFreeleechTorrent = False
+
+                            if self.freeleech and not isFreeleechTorrent:
+                                continue
 
                             try:
                                 if link.has_key('title'):
@@ -187,84 +132,66 @@ class TorrentBytesProvider(generic.TorrentProvider):
                                 else:
                                     title = link.contents[0]
                                 download_url = self.urls['download'] % (torrent_id, link.contents[0])
-                                id = int(torrent_id)
                                 seeders = int(cells[8].find('span').contents[0])
-                                leechers = int(cells[9].find('span').contents[0])
+                                leechers = int(cells[9].find('span').contents[0])       
+                                                         
+                                # Need size for failed downloads handling
+                                if size is None:
+                                    if re.match(r'[0-9]+,?\.?[0-9]*[KkMmGg]+[Bb]+', cells[6].text):
+                                        size = self._convertSize(cells[6].text)
+                                        if not size:
+                                            size = -1
+                               
                             except (AttributeError, TypeError):
                                 continue
 
+                            if not all([title, download_url]):
+                                continue
+
                             #Filter unseeded torrent
-                            if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
-                                logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(name, seeders, leechers), logger.DEBUG)
+                            if seeders < self.minseed or leechers < self.minleech:
+                                if mode != 'RSS':
+                                    logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(title, seeders, leechers), logger.DEBUG)
                                 continue
 
-                            if not title or not download_url:
-                                continue
-
-                            item = title, download_url, id, seeders, leechers
-                            logger.log(u"Found result: " + title.replace(' ','.') + " (" + searchURL + ")", logger.DEBUG)
+                            item = title, download_url, size, seeders, leechers
+                            if mode != 'RSS':
+                                logger.log(u"Found result: %s " % title, logger.DEBUG)
 
                             items[mode].append(item)
 
                 except Exception, e:
-                    logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
+                    logger.log(u"Failed parsing provider. Traceback: %s" % traceback.format_exc(), logger.ERROR)
 
-            #For each search mode sort all the items by seeders
+            #For each search mode sort all the items by seeders if available
             items[mode].sort(key=lambda tup: tup[3], reverse=True)
 
             results += items[mode]
 
         return results
 
-    def _get_title_and_url(self, item):
-
-        title, url, id, seeders, leechers = item
-
-        if title:
-            title = self._clean_title_from_provider(title)
-
-        if url:
-            url = str(url).replace('&amp;', '&')
-
-        return (title, url)
-
-    def findPropers(self, search_date=datetime.datetime.today()):
-
-        results = []
-
-        myDB = db.DBConnection()
-        sqlResults = myDB.select(
-            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
-            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
-            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
-            ' AND (e.status IN (' + ','.join([str(x) for x in Quality.DOWNLOADED]) + ')' +
-            ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
-        )
-
-        if not sqlResults:
-            return []
-
-        for sqlshow in sqlResults:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow["showid"]))
-            if self.show:
-                curEp = self.show.getEpisode(int(sqlshow["season"]), int(sqlshow["episode"]))
-
-                searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
-
-                for item in self._doSearch(searchString[0]):
-                    title, url = self._get_title_and_url(item)
-                    results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
-
-        return results
-
     def seedRatio(self):
         return self.ratio
+    
+    def _convertSize(self, sizeString):
+        size = sizeString[:-2]
+        modifier = sizeString[-2:]
+        size = float(size)
+        if modifier in 'KB':
+            size = size * 1024
+        elif modifier in 'MB':
+            size = size * 1024**2
+        elif modifier in 'GB':
+            size = size * 1024**3
+        elif modifier in 'TB':
+            size = size * 1024**4
+        return int(size)
 
 
 class TorrentBytesCache(tvcache.TVCache):
-    def __init__(self, provider):
+    def __init__(self, provider_obj):
 
-        tvcache.TVCache.__init__(self, provider)
+        tvcache.TVCache.__init__(self, provider_obj)
 
         # only poll TorrentBytes every 20 minutes max
         self.minTime = 20

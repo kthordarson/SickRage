@@ -21,22 +21,14 @@
 # are some mistakes or things I could have done better.
 
 import re
+import requests
 import traceback
-import datetime
-import sickbeard
-import generic
-from sickbeard.common import Quality
+
 from sickbeard import logger
 from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
-from sickrage.helper.exceptions import AuthException
-import requests
+from sickbeard.providers import generic
 from sickbeard.bs4_parser import BS4Parser
-from unidecode import unidecode
-from sickbeard.helpers import sanitizeSceneName
+from sickrage.helper.exceptions import AuthException
 
 
 class MoreThanTVProvider(generic.TorrentProvider):
@@ -46,9 +38,7 @@ class MoreThanTVProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "MoreThanTV")
 
         self.supportsBacklog = True
-        self.public = False
 
-        self.enabled = False
         self._uid = None
         self._hash = None
         self.username = None
@@ -56,31 +46,24 @@ class MoreThanTVProvider(generic.TorrentProvider):
         self.ratio = None
         self.minseed = None
         self.minleech = None
-        self.freeleech = False
-
-        self.cache = MoreThanTVCache(self)
+        # self.freeleech = False
 
         self.urls = {'base_url': 'https://www.morethan.tv/',
-                'login': 'https://www.morethan.tv/login.php',
-                'detail': 'https://www.morethan.tv/torrents.php?id=%s',
-                'search': 'https://www.morethan.tv/torrents.php?tags_type=1&order_by=time&order_way=desc&action=basic&searchsubmit=1&searchstr=%s',
-                'download': 'https://www.morethan.tv/torrents.php?action=download&id=%s',
-                }
+                     'login': 'https://www.morethan.tv/login.php',
+                     'detail': 'https://www.morethan.tv/torrents.php?id=%s',
+                     'search': 'https://www.morethan.tv/torrents.php?tags_type=1&order_by=time&order_way=desc&action=basic&searchsubmit=1&searchstr=%s',
+                     'download': 'https://www.morethan.tv/torrents.php?action=download&id=%s'}
 
         self.url = self.urls['base_url']
 
         self.cookies = None
 
+        self.proper_strings = ['PROPER', 'REPACK']
+
+        self.cache = MoreThanTVCache(self)
+
     def isEnabled(self):
         return self.enabled
-
-    def imageName(self):
-        return 'morethantv.png'
-
-    def getQuality(self, item, anime=False):
-
-        quality = Quality.sceneQuality(item[0], anime)
-        return quality
 
     def _checkAuth(self):
 
@@ -98,87 +81,39 @@ class MoreThanTVProvider(generic.TorrentProvider):
         else:
             login_params = {'username': self.username,
                             'password': self.password,
-                            'login': 'submit'
-            }
+                            'login': 'Log in',
+                            'keeplogged': '1'}
 
-            response = self.getURL(self.urls['login'],  post_data=login_params, timeout=30)
+            response = self.getURL(self.urls['login'], post_data=login_params, timeout=30)
             if not response:
-                logger.log(u'Unable to connect to ' + self.name + ' provider.', logger.ERROR)
+                logger.log(u"Unable to connect to provider", logger.WARNING)
                 return False
 
             if re.search('Your username or password was incorrect.', response):
-                logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+                logger.log(u"Invalid username or password. Check your settings", logger.WARNING)
                 return False
 
             return True
-
-    def _get_season_search_strings(self, ep_obj):
-
-        search_string = {'Season': []}
-        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-            if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = show_name + '.' + str(ep_obj.airdate).split('-')[0]
-            elif ep_obj.show.anime:
-                ep_string = show_name + '.' + "%d" % ep_obj.scene_absolute_number
-            else:
-                ep_string = show_name + '.S%02d*' % int(ep_obj.scene_season)  #1) showName SXX
-
-            search_string['Season'].append(re.sub('\.', '+', ep_string))
-
-        return [search_string]
-
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
-
-        search_string = {'Episode': []}
-
-        if not ep_obj:
-            return []
-
-        if self.show.air_by_date:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|')
-                search_string['Episode'].append(ep_string)
-        elif self.show.sports:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|') + '|' + \
-                            ep_obj.airdate.strftime('%b')
-                search_string['Episode'].append(ep_string)
-        elif self.show.anime:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            "%i" % int(ep_obj.scene_absolute_number)
-                search_string['Episode'].append(ep_string)
-        else:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                                  'episodenumber': ep_obj.scene_episode} + ' %s' % add_string
-
-                search_string['Episode'].append(re.sub('\.', '+', ep_string))
-
-        return [search_string]
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0, epObj=None):
 
         results = []
         items = {'Season': [], 'Episode': [], 'RSS': []}
 
-        freeleech = '3' if self.freeleech else '0'
+        # freeleech = '3' if self.freeleech else '0'
 
         if not self._doLogin():
             return results
 
         for mode in search_params.keys():
+            logger.log(u"Search Mode: %s" % mode, logger.DEBUG)
             for search_string in search_params[mode]:
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                if mode != 'RSS':
+                    logger.log(u"Search string: %s " % search_string, logger.DEBUG)
 
-                searchURL = self.urls['search'] % (search_string)
-
-                logger.log(u"Search string: " + searchURL, logger.DEBUG)
+                searchURL = self.urls['search'] % (search_string.replace('(', '').replace(')', ''))
+                logger.log(u"Search URL: %s" %  searchURL, logger.DEBUG)
 
                 # returns top 15 results by default, expandable in user profile to 100
                 data = self.getURL(searchURL)
@@ -192,26 +127,19 @@ class MoreThanTVProvider(generic.TorrentProvider):
 
                         #Continue only if one Release is found
                         if len(torrent_rows) < 2:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
-                                       logger.DEBUG)
+                            logger.log(u"Data returned from provider does not contain any torrents", logger.DEBUG)
                             continue
 
                         # skip colheader
                         for result in torrent_rows[1:]:
                             cells = result.findChildren('td')
-
-                            link = cells[1].find('a', attrs = {'title': 'Download'})
-
-                            link_str = str(link['href'])
-
-                            logger.log(u"link=" + link_str, logger.DEBUG)
+                            link = cells[1].find('a', attrs={'title': 'Download'})
 
                             #skip if torrent has been nuked due to poor quality
                             if cells[1].find('img', alt='Nuked') != None:
                                 continue
-                            torrent_id_long = link['href'].replace('torrents.php?action=download&id=', '')
-                            torrent_id = torrent_id_long.split('&', 1)[0]
 
+                            torrent_id_long = link['href'].replace('torrents.php?action=download&id=', '')
 
                             try:
                                 if link.has_key('title'):
@@ -224,86 +152,63 @@ class MoreThanTVProvider(generic.TorrentProvider):
 
                                 leechers = cells[7].contents[0]
 
+                                size = -1
+                                if re.match(r'\d+([,\.]\d+)?\s*[KkMmGgTt]?[Bb]', cells[4].contents[0]):
+                                    size = self._convertSize(cells[4].text.strip())
+
                             except (AttributeError, TypeError):
                                 continue
 
 
+                            if not all([title, download_url]):
+                                continue
+
                             #Filter unseeded torrent
-                            if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
-                                logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(title, seeders, leechers), logger.DEBUG)
+                            if seeders < self.minseed or leechers < self.minleech:
+                                if mode != 'RSS':
+                                    logger.log(u"Discarding torrent because it doesn't meet the minimum seeders or leechers: {0} (S:{1} L:{2})".format(title, seeders, leechers), logger.DEBUG)
                                 continue
 
-                            if not title or not download_url:
-                                continue
-
-# Debug
-#                            logger.log(u"title = " + title + ", download_url = " + download_url + ", torrent_id = " + torrent_id + ", seeders = " + seeders + ", leechers = " + leechers, logger.DEBUG)
-
-
-                            item = title, download_url, torrent_id, seeders, leechers
-                            logger.log(u"Found result: " + title + "(" + searchURL + ")", logger.DEBUG)
+                            item = title, download_url, size, seeders, leechers
+                            if mode != 'RSS':
+                                logger.log(u"Found result: %s " % title, logger.DEBUG)
 
                             items[mode].append(item)
 
                 except Exception, e:
-                    logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
+                    logger.log(u"Failed parsing provider. Traceback: %s" % traceback.format_exc(), logger.ERROR)
 
-            #For each search mode sort all the items by seeders
+            #For each search mode sort all the items by seeders if available
             items[mode].sort(key=lambda tup: tup[3], reverse=True)
 
             results += items[mode]
 
         return results
 
-    def _get_title_and_url(self, item):
-
-        title, url, id, seeders, leechers = item
-
-        if title:
-            title = self._clean_title_from_provider(title)
-
-        if url:
-            url = str(url).replace('&amp;', '&')
-
-        return (title, url)
-
-    def findPropers(self, search_date=datetime.datetime.today()):
-
-        results = []
-
-        myDB = db.DBConnection()
-        sqlResults = myDB.select(
-            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
-            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
-            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
-            ' AND (e.status IN (' + ','.join([str(x) for x in Quality.DOWNLOADED]) + ')' +
-            ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
-        )
-
-        if not sqlResults:
-            return []
-
-        for sqlshow in sqlResults:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow["showid"]))
-            if self.show:
-                curEp = self.show.getEpisode(int(sqlshow["season"]), int(sqlshow["episode"]))
-
-                searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
-
-                for item in self._doSearch(searchString[0]):
-                    title, url = self._get_title_and_url(item)
-                    results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
-
-        return results
-
     def seedRatio(self):
         return self.ratio
 
+    def _convertSize(self, sizeString):
+        size = sizeString[:-2].strip()
+        modifier = sizeString[-2:].upper()
+        try:
+            size = float(size)
+            if modifier in 'KB':
+                size = size * 1024
+            elif modifier in 'MB':
+                size = size * 1024**2
+            elif modifier in 'GB':
+                size = size * 1024**3
+            elif modifier in 'TB':
+                size = size * 1024**4
+        except Exception:
+            size = -1
+        return int(size)
 
 class MoreThanTVCache(tvcache.TVCache):
-    def __init__(self, provider):
+    def __init__(self, provider_obj):
 
-        tvcache.TVCache.__init__(self, provider)
+        tvcache.TVCache.__init__(self, provider_obj)
 
         # poll delay in minutes
         self.minTime = 20

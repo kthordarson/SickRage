@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import glob
 import fnmatch
@@ -55,7 +54,7 @@ class PostProcessor(object):
     EXISTS_SMALLER = 3
     DOESNT_EXIST = 4
 
-    IGNORED_FILESTRINGS = ["/.AppleDouble/", ".DS_Store"]
+    IGNORED_FILESTRINGS = [".AppleDouble", ".DS_Store"]
 
     def __init__(self, file_path, nzb_name=None, process_method=None, is_priority=None):
         """
@@ -164,12 +163,15 @@ class PostProcessor(object):
         if not file_path:
             return []
 
+        # don't confuse glob with chars we didn't mean to use
+        globbable_file_path = helpers.fixGlob(file_path)
+
         file_path_list = []
 
         if subfolders:
-            base_name = ek(os.path.basename, file_path).rpartition('.')[0]
+            base_name = ek(os.path.basename, globbable_file_path).rpartition('.')[0]
         else:
-            base_name = file_path.rpartition('.')[0]
+            base_name = globbable_file_path.rpartition('.')[0]
 
         if not base_name_only:
             base_name = base_name + '.'
@@ -178,20 +180,17 @@ class PostProcessor(object):
         if not base_name:
             return []
 
-        # don't confuse glob with chars we didn't mean to use
-        base_name = re.sub(r'[\[\]\*\?]', r'[\g<0>]', base_name)
-
         if subfolders: # subfolders are only checked in show folder, so names will always be exactly alike
-            filelist = ek(recursive_glob, ek(os.path.dirname, file_path), base_name + '*') # just create the list of all files starting with the basename
+            filelist = recursive_glob(ek(os.path.dirname, globbable_file_path), base_name + '*') # just create the list of all files starting with the basename
         else: # this is called when PP, so we need to do the filename check case-insensitive
             filelist = []
 
-            checklist = ek(glob.glob, helpers.fixGlob(ek(os.path.join, ek(os.path.dirname, file_path), '*'))) # get a list of all the files in the folder
+            checklist = glob.glob(ek(os.path.join, ek(os.path.dirname, globbable_file_path), '*')) # get a list of all the files in the folder
             for filefound in checklist: # loop through all the files in the folder, and check if they are the same name even when the cases don't match
                 file_name = filefound.rpartition('.')[0]
                 if not base_name_only:
                     file_name = file_name + '.'
-                if file_name.lower() == base_name.lower(): # if there's no difference in the filename add it to the filelist
+                if file_name.lower() == base_name.lower().replace('[[]', '[').replace('[]]', ']'): # if there's no difference in the filename add it to the filelist
                     filelist.append(filefound)
 
         for associated_file_path in filelist:
@@ -203,7 +202,7 @@ class PostProcessor(object):
                 continue
 
             # Exclude .rar files from associated list
-            if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
+            if re.search(r'(^.+\.(rar|r\d+)$)', associated_file_path):
                 continue
 
             if ek(os.path.isfile, associated_file_path):
@@ -443,7 +442,7 @@ class PostProcessor(object):
         # search the database for a possible match and return immediately if we find one
         myDB = db.DBConnection()
         for curName in names:
-            search_name = re.sub("[\.\-\ ]", "_", curName)
+            search_name = re.sub(r"[\.\-\ ]", "_", curName)
             sql_results = myDB.select("SELECT * FROM history WHERE resource LIKE ?", [search_name])
 
             if len(sql_results) == 0:
@@ -479,7 +478,7 @@ class PostProcessor(object):
 
         # remember whether it's a proper
         if parse_result.extra_info:
-            self.is_proper = re.search('(^|[\. _-])(proper|repack)([\. _-]|$)', parse_result.extra_info, re.I) != None
+            self.is_proper = re.search(r'(^|[\. _-])(proper|repack)([\. _-]|$)', parse_result.extra_info, re.I) != None
 
         # if the result is complete then remember that for later
         # if the result is complete then set release name
@@ -487,7 +486,7 @@ class PostProcessor(object):
                                          or parse_result.air_date) and parse_result.release_group:
 
             if not self.release_name:
-                self.release_name = helpers.remove_extension(ek(os.path.basename, parse_result.original_name))
+                self.release_name = helpers.remove_non_release_groups(helpers.remove_extension(ek(os.path.basename, parse_result.original_name)))
 
         else:
             logger.log(u"Parse result not sufficient (all following have to be set). will not save release name",
@@ -518,7 +517,7 @@ class PostProcessor(object):
         name = helpers.remove_non_release_groups(helpers.remove_extension(name))
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(file, tryIndexers=True, trySceneExceptions=True)
+        np = NameParser(file, tryIndexers=True)
         parse_result = np.parse(name)
 
         # show object
@@ -744,7 +743,7 @@ class PostProcessor(object):
                 return ep_quality
 
         # Try getting quality from the episode (snatched) status
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER:
+        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER  + common.Quality.SNATCHED_BEST:
             oldStatus, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)  # @UnusedVariable
             if ep_quality != common.Quality.UNKNOWN:
                 self._log(
@@ -810,32 +809,32 @@ class PostProcessor(object):
 
         old_ep_status, old_ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
 
-        # if SB downloaded this on purpose we likely have a priority download
+        # if SR downloaded this on purpose we likely have a priority download
         if self.in_history or ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
             # if the episode is still in a snatched status, then we can assume we want this
-            if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
-                self._log(u"SB snatched this episode and it is not processed before", logger.DEBUG)
+            if not self.in_history:
+                self._log(u"SR snatched this episode and it is not processed before", logger.DEBUG)
                 return True
-            # if it's not snatched, we only want it if the new quality is higher or if it's a proper of equal or higher quality
+
+            # if it's in history, we only want it if the new quality is higher or if it's a proper of equal or higher quality
             if new_ep_quality > old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
-                self._log(u"SB snatched this episode and it is a higher quality so I'm marking it as priority", logger.DEBUG)
+                self._log(u"SR snatched this episode and it is a higher quality so I'm marking it as priority", logger.DEBUG)
                 return True
+
             if self.is_proper and new_ep_quality >= old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
-                self._log(u"SB snatched this episode and it is a proper of equal or higher quality so I'm marking it as priority", logger.DEBUG)
+                self._log(u"SR snatched this episode and it is a proper of equal or higher quality so I'm marking it as priority", logger.DEBUG)
                 return True
+
             return False
 
         # if the user downloaded it manually and it's higher quality than the existing episode then it's priority
         if new_ep_quality > old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
-            self._log(
-                u"This was manually downloaded but it appears to be better quality than what we have so I'm marking it as priority",
-                logger.DEBUG)
+            self._log(u"This was manually downloaded but it appears to be better quality than what we have so I'm marking it as priority", logger.DEBUG)
             return True
 
         # if the user downloaded it manually and it appears to be a PROPER/REPACK then it's priority
         if self.is_proper and new_ep_quality >= old_ep_quality and new_ep_quality != common.Quality.UNKNOWN:
-            self._log(u"This was manually downloaded but it appears to be a proper so I'm marking it as priority",
-                      logger.DEBUG)
+            self._log(u"This was manually downloaded but it appears to be a proper so I'm marking it as priority", logger.DEBUG)
             return True
 
         return False
@@ -850,12 +849,16 @@ class PostProcessor(object):
         self._log(u"Processing " + self.file_path + " (" + str(self.nzb_name) + ")")
 
         if ek(os.path.isdir, self.file_path):
-            self._log(u"File " + self.file_path + " seems to be a directory")
+            self._log(u"File %s seems to be a directory" % self.file_path)
+            return False
+
+        if not ek(os.path.exists, self.file_path):
+            self._log(u"File %s doesn't exist, did unrar fail?" % self.file_path)
             return False
 
         for ignore_file in self.IGNORED_FILESTRINGS:
             if ignore_file in self.file_path:
-                self._log(u"File " + self.file_path + " is ignored type, skipping")
+                self._log(u"File %s is ignored type, skipping" % self.file_path)
                 return False
 
         # reset per-file stuff
@@ -867,12 +870,10 @@ class PostProcessor(object):
         # try to find the file info
         (show, season, episodes, quality, version) = self._find_info()
         if not show:
-            self._log(u"This show isn't in your list, you need to add it to SB before post-processing an episode",
-                      logger.WARNING)
+            self._log(u"This show isn't in your list, you need to add it to SR before post-processing an episode")
             raise EpisodePostProcessingFailedException()
         elif season == None or not episodes:
-            self._log(u"Not enough information to determine what episode this is", logger.DEBUG)
-            self._log(u"Quitting post-processing", logger.DEBUG)
+            self._log(u"Not enough information to determine what episode this is. Quitting post-processing")
             return False
 
         # retrieve/create the corresponding TVEpisode objects
@@ -887,7 +888,7 @@ class PostProcessor(object):
         else:
             new_ep_quality = self._get_quality(ep_obj)
 
-        logger.log(u"Quality of the episode we're processing: " + str(new_ep_quality), logger.DEBUG)
+        logger.log(u"Quality of the episode we're processing: %s" % new_ep_quality, logger.DEBUG)
 
         # see if this is a priority download (is it snatched, in history, PROPER, or BEST)
         priority_download = self._is_priority(ep_obj, new_ep_quality)
@@ -908,36 +909,34 @@ class PostProcessor(object):
         if not priority_download:
 
             # Not a priority and the quality is lower than what we already have
-            if (new_ep_quality < old_ep_quality and new_ep_quality != common.Quality.UNKNOWN) and not existing_file_status == PostProcessor.DOESNT_EXIST:
-                self._log(u"File exists and new file quality is lower than existing, marking it unsafe to replace", logger.DEBUG)
+            if (new_ep_quality < old_ep_quality and old_ep_quality != common.Quality.UNKNOWN) and not existing_file_status == PostProcessor.DOESNT_EXIST:
+                self._log(u"File exists and new file quality is lower than existing, marking it unsafe to replace")
                 return False
 
             # if there's an existing file that we don't want to replace stop here
             if existing_file_status == PostProcessor.EXISTS_LARGER:
                 if self.is_proper:
                     self._log(
-                        u"File exists and new file is smaller, new file is a proper/repack, marking it safe to replace",
-                        logger.DEBUG)
+                        u"File exists and new file is smaller, new file is a proper/repack, marking it safe to replace")
                     return True
 
                 else:
-                    self._log(u"File exists and new file is smaller, marking it unsafe to replace", logger.DEBUG)
+                    self._log(u"File exists and new file is smaller, marking it unsafe to replace")
                     return False
 
             elif existing_file_status == PostProcessor.EXISTS_SAME:
-                self._log(u"File exists and new file is same size, marking it unsafe to replace", logger.DEBUG)
+                self._log(u"File exists and new file is same size, marking it unsafe to replace")
                 return False
 
         # if the file is priority then we're going to replace it even if it exists
         else:
             self._log(
-                u"This download is marked a priority download so I'm going to replace an existing file if I find one",
-                logger.DEBUG)
+                u"This download is marked a priority download so I'm going to replace an existing file if I find one")
 
         # try to find out if we have enough space to perform the copy or move action.
         if not helpers.isFileLocked(self.file_path, False):
             if not verify_freespace(self.file_path, ep_obj.show._location, [ep_obj] + ep_obj.relatedEps):
-                self._log("Not enough space to continue PP, exiting")
+                self._log("Not enough space to continue PP, exiting", logger.WARNING)
                 return False
         else:
             self._log("Unable to determine needed filespace as the source file is locked for access")
@@ -1075,6 +1074,7 @@ class PostProcessor(object):
             for cur_ep in [ep_obj] + ep_obj.relatedEps:
                 with cur_ep.lock:
                     cur_ep.location = ek(os.path.join, dest_path, new_file_name)
+                    cur_ep.refreshSubtitles()
                     cur_ep.downloadSubtitles(force=True)
 
         # now that processing has finished, we can put the info in the DB. If we do it earlier, then when processing fails, it won't try again.
@@ -1105,29 +1105,33 @@ class PostProcessor(object):
         # log it to history
         history.logDownload(ep_obj, self.file_path, new_ep_quality, self.release_group, new_ep_version)
 
-        # send notifications
-        notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
+        #If any notification fails, don't stop postProcessor
+        try:
+            # send notifications
+            notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-        # do the library update for KODI
-        notifiers.kodi_notifier.update_library(ep_obj.show.name)
+            # do the library update for KODI
+            notifiers.kodi_notifier.update_library(ep_obj.show.name)
 
-        # do the library update for Plex
-        notifiers.plex_notifier.update_library(ep_obj)
+            # do the library update for Plex
+            notifiers.plex_notifier.update_library(ep_obj)
 
-        # do the library update for EMBY
-        notifiers.emby_notifier.update_library(ep_obj.show)
+            # do the library update for EMBY
+            notifiers.emby_notifier.update_library(ep_obj.show)
 
-        # do the library update for NMJ
-        # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)
+            # do the library update for NMJ
+            # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)
 
-        # do the library update for Synology Indexer
-        notifiers.synoindex_notifier.addFile(ep_obj.location)
+            # do the library update for Synology Indexer
+            notifiers.synoindex_notifier.addFile(ep_obj.location)
 
-        # do the library update for pyTivo
-        notifiers.pytivo_notifier.update_library(ep_obj)
+            # do the library update for pyTivo
+            notifiers.pytivo_notifier.update_library(ep_obj)
 
-        # do the library update for Trakt
-        notifiers.trakt_notifier.update_library(ep_obj)
+            # do the library update for Trakt
+            notifiers.trakt_notifier.update_library(ep_obj)
+        except:
+            logger.log(u"Some notifications could not be sent. Continuing with postProcessing...")
 
         self._run_extra_scripts(ep_obj)
 

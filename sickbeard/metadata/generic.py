@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import os.path
 import re
@@ -292,9 +291,8 @@ class GenericMetadata:
                 indexerid = showXML.find('id')
 
                 root = showXML.getroot()
-
-                if indexerid:
-                    indexerid.text = show_obj.indexerid
+                if indexerid is not None:
+                    indexerid.text = str(show_obj.indexerid)
                 else:
                     etree.SubElement(root, "id").text = str(show_obj.indexerid)
 
@@ -391,7 +389,7 @@ class GenericMetadata:
                 continue
 
             thumb_url = getattr(myEp, 'filename', None)
-            if thumb_url is not None:
+            if thumb_url:
                 return thumb_url
 
         return None
@@ -775,7 +773,7 @@ class GenericMetadata:
             return None
 
         if image_type == 'poster_thumb':
-            if getattr(indexer_show_obj, 'poster', None) is not None:
+            if getattr(indexer_show_obj, 'poster', None):
                 image_url = re.sub('posters', '_cache/posters', indexer_show_obj['poster'])
             if not image_url:
                 # Try and get images from Fanart.TV
@@ -784,13 +782,13 @@ class GenericMetadata:
                 # Try and get images from TMDB
                 image_url = self._retrieve_show_images_from_tmdb(show_obj, image_type)
         elif image_type == 'banner_thumb':
-            if getattr(indexer_show_obj, 'banner', None) is not None:
+            if getattr(indexer_show_obj, 'banner', None):
                 image_url = re.sub('graphical', '_cache/graphical', indexer_show_obj['banner'])
             if not image_url:
                 # Try and get images from Fanart.TV
                 image_url = self._retrieve_show_images_from_fanart(show_obj, image_type)
         else:
-            if getattr(indexer_show_obj, image_type, None) is not None:
+            if getattr(indexer_show_obj, image_type, None):
                 image_url = indexer_show_obj[image_type]
             if not image_url:
                 # Try and get images from Fanart.TV
@@ -840,7 +838,7 @@ class GenericMetadata:
             return result
 
         # if we have no season banners then just finish
-        if getattr(indexer_show_obj, '_banners', None) is None:
+        if not getattr(indexer_show_obj, '_banners', None):
             return result
 
         if 'season' not in indexer_show_obj['_banners'] or 'season' not in indexer_show_obj['_banners']['season']:
@@ -894,7 +892,7 @@ class GenericMetadata:
             return result
 
         # if we have no season banners then just finish
-        if getattr(indexer_show_obj, '_banners', None) is None:
+        if not getattr(indexer_show_obj, '_banners', None):
             return result
 
         # if we have no season banners then just finish

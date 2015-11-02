@@ -16,7 +16,7 @@
 import datetime
 import urllib
 
-import generic
+from sickbeard.providers import generic
 
 from sickbeard import classes
 from sickbeard import logger, tvcache
@@ -34,9 +34,8 @@ class HDBitsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "HDBits")
 
         self.supportsBacklog = True
-        self.public = False
 
-        self.enabled = False
+
         self.username = None
         self.passkey = None
         self.ratio = None
@@ -46,8 +45,7 @@ class HDBitsProvider(generic.TorrentProvider):
         self.urls = {'base_url': 'https://hdbits.org',
                      'search': 'https://hdbits.org/api/torrents',
                      'rss': 'https://hdbits.org/api/torrents',
-                     'download': 'https://hdbits.org/download.php?'
-        }
+                     'download': 'https://hdbits.org/download.php?'}
 
         self.url = self.urls['base_url']
 
@@ -65,10 +63,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
         if 'status' in parsedJSON and 'message' in parsedJSON:
             if parsedJSON.get('status') == 5:
-                logger.log(u"Incorrect authentication credentials for " + self.name + " : " + parsedJSON['message'],
-                           logger.DEBUG)
-                raise AuthException(
-                    "Your authentication credentials for " + self.name + " are incorrect, check your config.")
+                logger.log(u"Invalid username or password. Check your settings", logger.WARNING)
 
         return True
 
@@ -91,12 +86,13 @@ class HDBitsProvider(generic.TorrentProvider):
         return (title, url)
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0, epObj=None):
+
+        #FIXME
         results = []
 
-        self._checkAuth()
+        logger.log(u"Search string: %s" %  search_params, logger.DEBUG)
 
-        logger.log(u"Search url: " + self.urls['search'] + " search_params: " + search_params,
-                   logger.DEBUG)
+        self._checkAuth()
 
         parsedJSON = self.getURL(self.urls['search'], post_data=search_params, json=True)
         if not parsedJSON:
@@ -106,12 +102,12 @@ class HDBitsProvider(generic.TorrentProvider):
             if parsedJSON and 'data' in parsedJSON:
                 items = parsedJSON['data']
             else:
-                logger.log(u"Resulting JSON from " + self.name + " isn't correct, not parsing it", logger.ERROR)
+                logger.log(u"Resulting JSON from provider isn't correct, not parsing it", logger.ERROR)
                 items = []
 
             for item in items:
                 results.append(item)
-
+        #FIXME SORTING
         return results
 
     def findPropers(self, search_date=None):
@@ -124,7 +120,7 @@ class HDBitsProvider(generic.TorrentProvider):
                 if item['utadded']:
                     try:
                         result_date = datetime.datetime.fromtimestamp(int(item['utadded']))
-                    except:
+                    except Exception:
                         result_date = None
 
                     if result_date:
@@ -193,9 +189,9 @@ class HDBitsProvider(generic.TorrentProvider):
 
 
 class HDBitsCache(tvcache.TVCache):
-    def __init__(self, provider):
+    def __init__(self, provider_obj):
 
-        tvcache.TVCache.__init__(self, provider)
+        tvcache.TVCache.__init__(self, provider_obj)
 
         # only poll HDBits every 15 minutes max
         self.minTime = 15
@@ -208,7 +204,7 @@ class HDBitsCache(tvcache.TVCache):
 
             if self.provider._checkAuthFromData(parsedJSON):
                 results = parsedJSON['data']
-        except:
+        except Exception:
             pass
 
         return {'entries': results}

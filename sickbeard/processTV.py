@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import os
 import stat
@@ -33,7 +32,11 @@ from sickrage.helper.encoding import ek
 from sickrage.helper.exceptions import EpisodePostProcessingFailedException, ex, FailedPostProcessingFailedException
 
 from unrar2 import RarFile
-from unrar2.rar_exceptions import *
+from unrar2.rar_exceptions import FileOpenError
+from unrar2.rar_exceptions import ArchiveHeaderBroken
+from unrar2.rar_exceptions import InvalidRARArchive
+from unrar2.rar_exceptions import InvalidRARArchiveUsage
+from unrar2.rar_exceptions import IncorrectRARPassword
 
 import shutil
 import shutil_custom
@@ -222,8 +225,8 @@ def processDir(dirName, nzbName=None, process_method=None, force=False, is_prior
                 process_media(path, [video], nzbName, process_method, force, is_priority, result)
 
     else:
-        result.output += logHelper(u"Found temporary sync files, skipping post processing for folder " + str(path), logger.WARNING)
-        result.output += logHelper(u"Sync Files: " + str(SyncFiles) + " in path: " + path, logger.WARNING)
+        result.output += logHelper(u"Found temporary sync files, skipping post processing for folder " + str(path))
+        result.output += logHelper(u"Sync Files: " + str(SyncFiles) + " in path: " + path)
         result.missedfiles.append(path + " : Syncfiles found")
 
     #Process Video File in all TV Subdir
@@ -281,8 +284,8 @@ def processDir(dirName, nzbName=None, process_method=None, force=False, is_prior
                         if delete_folder(processPath, check_empty=True):
                             result.output += logHelper(u"Deleted folder: " + processPath, logger.DEBUG)
             else:
-                result.output += logHelper(u"Found temporary sync files, skipping post processing for folder: " + str(processPath), logger.WARNING)
-                result.output += logHelper(u"Sync Files: " + str(SyncFiles) + " in path: " + processPath, logger.WARNING)
+                result.output += logHelper(u"Found temporary sync files, skipping post processing for folder: " + str(processPath))
+                result.output += logHelper(u"Sync Files: " + str(SyncFiles) + " in path: " + processPath)
                 result.missedfiles.append(processPath + " : Syncfiles found")
 
     if result.aggresult:
@@ -311,16 +314,21 @@ def validateDir(path, dirName, nzbNameOriginal, failed, result):
     :return: True if dir is valid for processing, False if not
     """
 
+    IGNORED_FOLDERS = ['.AppleDouble', '.@__thumb', '@eaDir']
+    folder_name = ek(os.path.basename, dirName)
+    if folder_name in IGNORED_FOLDERS:
+        return False
+
     result.output += logHelper(u"Processing folder " + dirName, logger.DEBUG)
 
-    if ek(os.path.basename, dirName).startswith('_FAILED_'):
+    if folder_name.startswith('_FAILED_'):
         result.output += logHelper(u"The directory name indicates it failed to extract.", logger.DEBUG)
         failed = True
-    elif ek(os.path.basename, dirName).startswith('_UNDERSIZED_'):
+    elif folder_name.startswith('_UNDERSIZED_'):
         result.output += logHelper(u"The directory name indicates that it was previously rejected for being undersized.",
                                logger.DEBUG)
         failed = True
-    elif ek(os.path.basename, dirName).upper().startswith('_UNPACK'):
+    elif folder_name.upper().startswith('_UNPACK'):
         result.output += logHelper(u"The directory name indicates that this release is in the process of being unpacked.",
                                logger.DEBUG)
         result.missedfiles.append(dirName + " : Being unpacked")
@@ -433,30 +441,30 @@ def unRAR(path, rarFiles, force, result):
                             unpacked_files.append(basename)
                 del rar_handle
 
-            except FatalRARError:
-                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Fatal Error".format(archive), logger.ERROR)
+            except ArchiveHeaderBroken as e:
+                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Archive Header Broken".format(archive), logger.ERROR)
                 result.result = False
-                result.missedfiles.append(archive + " : Fatal error unpacking archive")
-                continue
-            except CRCRARError:
-                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Archive CRC Error".format(archive), logger.ERROR)
-                result.result = False
-                result.missedfiles.append(archive + " : CRC error unpacking archive")
+                result.missedfiles.append(archive + " : Unpacking failed because the Archive Header is Broken")
                 continue
             except IncorrectRARPassword:
-                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Invalid Password".format(archive), logger.ERROR)
+                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Incorrect Rar Password".format(archive), logger.ERROR)
                 result.result = False
-                result.missedfiles.append(archive + " : Password protected RAR")
+                result.missedfiles.append(archive + " : Unpacking failed because of an Incorrect Rar Password")
                 continue
-            except NoFileToExtract:
-                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: No file extracted, check the parent folder and destination file permissions.".format(archive), logger.ERROR)
+            except FileOpenError:
+                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: File Open Error, check the parent folder and destination file permissions.".format(archive), logger.ERROR)
                 result.result = False
-                result.missedfiles.append(archive + " : Nothing was unpacked (file permissions?)")
+                result.missedfiles.append(archive + " : Unpacking failed with a File Open Error (file permissions?)")
                 continue
-            except GenericRARError:
-                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Generic Error".format(archive), logger.ERROR)
+            except InvalidRARArchiveUsage:
+                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Invalid Rar Archive Usage".format(archive), logger.ERROR)
                 result.result = False
-                result.missedfiles.append(archive + " : Unpacking Failed with a Generic Error")
+                result.missedfiles.append(archive + " : Unpacking Failed with Invalid Rar Archive Usage")
+                continue
+            except InvalidRARArchive:
+                result.output += logHelper(u"Failed Unrar archive {0}: Unrar: Invalid Rar Archive".format(archive), logger.ERROR)
+                result.result = False
+                result.missedfiles.append(archive + " : Unpacking Failed with an Invalid Rar Archive Error")
                 continue
             except Exception, e:
                 result.output += logHelper(u"Failed Unrar archive " + archive + ': ' + ex(e), logger.ERROR)
@@ -497,7 +505,7 @@ def already_postprocessed(dirName, videofile, force, result):
 
         #Needed if we have downloaded the same episode @ different quality
         #But we need to make sure we check the history of the episode we're going to PP, and not others
-        np = NameParser(dirName, tryIndexers=True, trySceneExceptions=True)
+        np = NameParser(dirName, tryIndexers=True)
         try: #if it fails to find any info (because we're doing an unparsable folder (like the TV root dir) it will throw an exception, which we want to ignore
             parse_result = np.parse(dirName)
         except: #ignore the exception, because we kind of expected it, but create parse_result anyway so we can perform a check on it.

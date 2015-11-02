@@ -5,23 +5,19 @@
     from sickbeard.helpers import anon_url
 %>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/configSubtitles.js?${sbPID}"></script>
-<script type="text/javascript" src="${sbRoot}/js/config.js"></script>
-<script type="text/javascript" src="${sbRoot}/js/lib/jquery.tokeninput.js"></script>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $("#subtitles_languages").tokenInput(
-                [${",\r\n".join("{id: \"" + lang.opensubtitles + "\", name: \"" + lang.name + "\"}" for lang in subtitles.subtitleLanguageFilter())}],
-                {
-                    method: "POST",
-                    hintText: "Write to search a language and select it",
-                    preventDuplicates: true,
-                    prePopulate: [${",\r\n".join("{id: \"" + subtitles.fromietf(lang).opensubtitles + "\", name: \"" + subtitles.fromietf(lang).name + "\"}" for lang in subtitles.wantedLanguages()) if subtitles.wantedLanguages() else ''}]
-                }
-            );
+<script type="text/javascript" src="${srRoot}/js/configSubtitles.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/config.js"></script>
+<script>
+$(document).ready(function() {
+    $("#subtitles_languages").tokenInput([${','.join("{\"id\": \"" + lang.opensubtitles + "\", name: \"" + lang.name + "\"}" for lang in subtitles.subtitleLanguageFilter())}], {
+        method: "POST",
+        hintText: "Write to search a language and select it",
+        preventDuplicates: true,
+        prePopulate: [${','.join("{\"id\": \"" + subtitles.fromietf(lang).opensubtitles + "\", name: \"" + subtitles.fromietf(lang).name + "\"}" for lang in subtitles.wantedLanguages()) if subtitles.wantedLanguages() else ''}]
     });
-    $('#config-components').tabs();
-    $('#subtitles_dir').fileBrowser({ title: 'Select Subtitles Download Directory' });
+});
+$('#config-components').tabs();
+$('#subtitles_dir').fileBrowser({ title: 'Select Subtitles Download Directory' });
 </script>
 </%block>
 <%block name="content">
@@ -38,11 +34,12 @@
 
             <div id="config-components">
                 <ul>
-                    <li><a href="#core-component-group4">Subtitles Search</a></li>
+                    <li><a href="#core-component-group1">Subtitles Search</a></li>
                     <li><a href="#core-component-group2">Subtitles Plugin</a></li>
+                    <li><a href="#core-component-group3">Plugin Settings</a></li>
                 </ul>
 
-                <div id="core-component-group4" class="component-group">
+                <div id="core-component-group1" class="component-group">
 
                     <div class="component-group-desc">
                         <h3>Subtitles Search</h3>
@@ -54,7 +51,7 @@
                             <label for="use_subtitles" class="clearfix">
                                 <span class="component-title">Search Subtitles</span>
                                 <span class="component-desc">
-                                    <input type="checkbox" class="enabler" ${("", " checked=\"checked\"")[bool(sickbeard.USE_SUBTITLES)]} id="use_subtitles" name="use_subtitles">
+                                    <input type="checkbox" class="enabler" ${('', ' checked="checked"')[bool(sickbeard.USE_SUBTITLES)]} id="use_subtitles" name="use_subtitles">
                                 </span>
                             </label>
                         </div>
@@ -115,6 +112,15 @@
                                     </label>
                                 </div>
                                 <div class="field-pair">
+                                    <label class="clearfix" for="subtitles_hearing_impaired">
+                                        <span class="component-title">Hearing Impaired Subtitles</span>
+                                        <span class="component-desc">
+                                            <input type="checkbox" name="subtitles_hearing_impaired" id="subtitles_hearing_impaired" ${('', 'checked="checked"')[bool(sickbeard.SUBTITLES_HEARING_IMPAIRED)]}/>
+                                            <p>Download hearing impaired style subtitles?</p>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="field-pair">
                                     <label class="nocheck">
                                         <span class="component-title">Extra Scripts</span>
                                            <input type="text" name="subtitles_extra_scripts" value="<%'|'.join(sickbeard.SUBTITLES_EXTRA_SCRIPTS)%>" class="form-control input-sm input350" />
@@ -160,7 +166,7 @@
                             <li class="ui-state-default" id="${curService['name']}">
                                 <input type="checkbox" id="enable_${curService['name']}" class="service_enabler" ${('', 'checked="checked"')[curService['enabled'] == True]}/>
                                 <a href="${anon_url(curService['url'])}" class="imgLink" target="_new">
-                                    <img src="${sbRoot}/images/subtitles/${curService['image']}" alt="${curService['url']}" title="${curService['url']}" width="16" height="16" style="vertical-align:middle;"/>
+                                    <img src="${srRoot}/images/subtitles/${curService['image']}" alt="${curService['url']}" title="${curService['url']}" width="16" height="16" style="vertical-align:middle;"/>
                                 </a>
                             <span style="vertical-align:middle;">${curService['name'].capitalize()}</span>
                             <span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="vertical-align:middle;"></span>
@@ -172,9 +178,42 @@
                         <br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
                     </fieldset>
                 </div><!-- /component-group2 //-->
+                <div id="core-component-group3" class="component-group">
+                    <div class="component-group-desc">
+                        <h3>Subtitle Settings</h3>
+                        <p>Set user and password for each provider</p>
+                    </div><!-- /component-group-desc //-->
 
-                <br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
-
+                    <fieldset class="component-group-list" style="margin-left: 50px; margin-top:36px">
+                        <%
+                            providerLoginDict = {
+                                'legendastv': {'user': sickbeard.LEGENDASTV_USER, 'pass': sickbeard.LEGENDASTV_PASS},
+                                'addic7ed': {'user': sickbeard.ADDIC7ED_USER, 'pass': sickbeard.ADDIC7ED_PASS},
+                                'opensubtitles': {'user': sickbeard.OPENSUBTITLES_USER, 'pass': sickbeard.OPENSUBTITLES_PASS}}
+                        %>
+                        % for curService in sickbeard.subtitles.sortedServiceList():
+                            % if curService['name'] not in providerLoginDict.keys():
+                                <% continue %>
+                            % endif
+                            ##<div class="field-pair${(' hidden', '')[curService['enabled']]}"> ## Need js to show/hide on save
+                            <div class="field-pair">
+                                <label class="nocheck" for="${curService['name']}_user">
+                                    <span class="component-title">${curService['name'].capitalize()} User Name</span>
+                                    <span class="component-desc">
+                                        <input type="text" name="${curService['name']}_user" id="${curService['name']}_user" value="${providerLoginDict[curService['name']]['user']}" class="form-control input-sm input300" />
+                                    </span>
+                                </label>
+                                <label class="nocheck" for="${curService['name']}_pass">
+                                    <span class="component-title">${curService['name'].capitalize()} Password</span>
+                                    <span class="component-desc">
+                                        <input type="password" name="${curService['name']}_pass" id="${curService['name']}_pass" value="${providerLoginDict[curService['name']]['pass']}" class="form-control input-sm input300" />
+                                    </span>
+                                </label>
+                            </div>
+                        % endfor
+                        <br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+                    </fieldset>
+                </div><!-- /component-group3 //-->
             </div><!-- /config-components //-->
 
 </form>

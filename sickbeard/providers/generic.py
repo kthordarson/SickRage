@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import datetime
 import os
@@ -39,7 +38,7 @@ from sickbeard.common import Quality
 from sickbeard.common import user_agents
 from sickrage.helper.encoding import ek
 from sickrage.helper.exceptions import ex
-
+from sickbeard import show_name_helpers
 
 class GenericProvider:
     NZB = "nzb"
@@ -55,7 +54,8 @@ class GenericProvider:
         self.proxyGlypeProxySSLwarning = None
         self.urls = {}
         self.url = ''
-        self.public = True
+
+        self.public = False
 
         self.show = None
 
@@ -87,12 +87,14 @@ class GenericProvider:
 
         shuffle(self.btCacheURLS)
 
+        self.proper_strings = ['PROPER|REPACK']
+
     def getID(self):
         return GenericProvider.makeID(self.name)
 
     @staticmethod
     def makeID(name):
-        return re.sub("[^\w\d_]", "_", name.strip().lower())
+        return re.sub(r"[^\w\d_]", "_", name.strip().lower())
 
     def imageName(self):
         return self.getID() + '.png'
@@ -156,7 +158,7 @@ class GenericProvider:
         filename = u''
         if result.url.startswith('magnet'):
             try:
-                torrent_hash = re.findall('urn:btih:([\w]{32,40})', result.url)[0].upper()
+                torrent_hash = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0].upper()
 
                 try:
                     torrent_name = re.findall('dn=([^&]+)', result.url)[0]
@@ -212,6 +214,11 @@ class GenericProvider:
                 self.headers.update({'Referer': '/'.join(url.split('/')[:3]) + '/'})
 
             logger.log(u"Downloading a result from " + self.name + " at " + url)
+
+            # Support for Jackett/TorzNab
+            if url.endswith(GenericProvider.TORRENT) and filename.endswith(GenericProvider.NZB):
+                filename = filename.rsplit('.', 1)[0] + '.' + GenericProvider.TORRENT
+
             if helpers.download_file(self.proxy._buildURL(url), filename, session=self.session, headers=self.headers):
                 if self._verify_download(filename):
                     logger.log(u"Saved result to " + filename, logger.INFO)
@@ -231,7 +238,7 @@ class GenericProvider:
         """
 
         # primitive verification of torrents, just make sure we didn't get a text file or something
-        if self.providerType == GenericProvider.TORRENT:
+        if file_name.endswith(GenericProvider.TORRENT):
             try:
                 parser = createParser(file_name)
                 if parser:
@@ -283,30 +290,20 @@ class GenericProvider:
         Returns: A tuple containing two strings representing title and URL respectively
         """
 
-        title = item.get('title')
+        title = item.get('title', '')
         if title:
             title = u'' + title.replace(' ', '.')
 
-        url = item.get('link')
+        url = item.get('link', '')
         if url:
-            url = url.replace('&amp;', '&')
+            url = url.replace('&amp;', '&').replace('%26tr%3D', '&tr=')
 
         return title, url
 
     def _get_size(self, item):
         """Gets the size from the item"""
-        if self.providerType != GenericProvider.NZB:
-            logger.log(u"Torrent Generic providers doesn't have _get_size() implemented yet", logger.DEBUG)
-            return -1
-        else:
-            size = item.get('links')[1].get('length')
-            if size:
-                size = int(size)
-                return size
-            else:
-                logger.log(u"Size was not found in your provider response", logger.DEBUG)
-                return -1
-
+        logger.log(u"Provider type doesn't have _get_size() implemented yet", logger.ERROR)
+        return -1
 
     def findSearchResults(self, show, episodes, search_mode, manualSearch=False, downCurQuality=False):
 
@@ -344,8 +341,6 @@ class GenericProvider:
                 # get single episode search results
                 search_strings = self._get_episode_search_strings(epObj)
 
-            if search_strings:
-                logger.log(u'search_strings = %s' % repr(search_strings), logger.DEBUG)
             first = search_strings and isinstance(search_strings[0], dict) and 'rid' in search_strings[0]
             if first:
                 logger.log(u'First search_string has rid', logger.DEBUG)
@@ -437,7 +432,7 @@ class GenericProvider:
                     actual_season = parse_result.season_number
                     actual_episodes = parse_result.episode_numbers
             else:
-                if not (parse_result.is_air_by_date):
+                if not parse_result.is_air_by_date:
                     logger.log(
                         u"This is supposed to be a date search but the result " + title + " didn't parse as one, skipping it",
                         logger.DEBUG)
@@ -543,6 +538,17 @@ class NZBProvider(GenericProvider):
 
         self.providerType = GenericProvider.NZB
 
+    def _get_size(self, item):
+        try:
+            size = item.get('links')[1].get('length', -1)
+        except IndexError:
+            size = -1
+
+        if not size:
+            logger.log(u"Size was not found in your provider response", logger.DEBUG)
+
+        return int(size)
+
 
 class TorrentProvider(GenericProvider):
     def __init__(self, name):
@@ -550,11 +556,112 @@ class TorrentProvider(GenericProvider):
 
         self.providerType = GenericProvider.TORRENT
 
-    def _clean_title_from_provider(self, title):
-        if title:
-            title = u'' + title.replace(' ', '.')
-        return title
+    def _get_title_and_url(self, item):
+        from feedparser.feedparser import FeedParserDict
+        if isinstance(item, (dict, FeedParserDict)):
+            title = item.get('title', '')
+            download_url = item.get('url', '')
+            if not download_url:
+                download_url = item.get('link', '')
 
+        elif isinstance(item, (list, tuple)) and len(item) > 1:
+            title = item[0]
+            download_url = item[1]
+
+        # Temp global block `DIAMOND` releases
+        if title.endswith('DIAMOND'):
+            logger.log(u'Skipping DIAMOND release for mass fake releases.')
+            title = download_url = u'FAKERELEASE'
+
+        if title:
+            title = self._clean_title_from_provider(title)
+        if download_url:
+            download_url = download_url.replace('&amp;', '&')
+
+        return (title, download_url)
+
+
+    def _get_size(self, item):
+
+        size = -1
+        if isinstance(item, dict):
+            size = item.get('size', -1)
+        elif isinstance(item, (list, tuple)) and len(item) > 2:
+            size = item[2]
+
+        # Make sure we didn't select seeds/leechers by accident
+        if not size or size < 1024*1024:
+            size = -1
+
+        return size
+
+    def _get_season_search_strings(self, ep_obj):
+
+        search_string = {'Season': []}
+        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
+            if ep_obj.show.air_by_date or ep_obj.show.sports:
+                ep_string = show_name + ' ' + str(ep_obj.airdate).split('-')[0]
+            elif ep_obj.show.anime:
+                ep_string = show_name + ' ' + "%d" % ep_obj.scene_absolute_number
+            else:
+                ep_string = show_name + ' S%02d' % int(ep_obj.scene_season)  #1) showName.SXX
+
+            search_string['Season'].append(ep_string.encode('utf-8').strip())
+
+        return [search_string]
+
+    def _get_episode_search_strings(self, ep_obj, add_string=''):
+
+        search_string = {'Episode': []}
+
+        if not ep_obj:
+            return []
+
+        for show_name in set(show_name_helpers.allPossibleShowNames(ep_obj.show)):
+            ep_string = show_name + ' '
+            if ep_obj.show.air_by_date:
+                ep_string += str(ep_obj.airdate).replace('-', ' ')
+            elif ep_obj.show.sports:
+                ep_string += str(ep_obj.airdate).replace('-', ' ') + ('|', ' ')[len(self.proper_strings) > 1] + ep_obj.airdate.strftime('%b')
+            elif ep_obj.show.anime:
+                ep_string += "%02d" % int(ep_obj.scene_absolute_number)
+            else:
+                ep_string += sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
+                                                              'episodenumber': ep_obj.scene_episode}
+            if add_string:
+                ep_string = ep_string + ' %s' % add_string
+
+            search_string['Episode'].append(ep_string.encode('utf-8').strip())
+
+        return [search_string]
+
+    def _clean_title_from_provider(self, title):
+        return (title or '').replace(' ', '.')
+
+    def findPropers(self, search_date=datetime.datetime.today()):
+
+        results = []
+
+        myDB = db.DBConnection()
+        sqlResults = myDB.select(
+            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
+            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
+            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
+            ' AND e.status IN (' + ','.join([str(x) for x in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_BEST]) + ')'
+        )
+
+        for sqlshow in sqlResults or []:
+            show = helpers.findCertainShow(sickbeard.showList, int(sqlshow["showid"]))
+            if show:
+                curEp = show.getEpisode(int(sqlshow["season"]), int(sqlshow["episode"]))
+                for term in self.proper_strings:
+                    searchString = self._get_episode_search_strings(curEp, add_string=term)
+
+                    for item in self._doSearch(searchString[0]):
+                        title, url = self._get_title_and_url(item)
+                        results.append(classes.Proper(title, url, datetime.datetime.today(), show))
+
+        return results
 
 class ProviderProxy:
     def __init__(self):

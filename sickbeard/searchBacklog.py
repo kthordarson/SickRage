@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import datetime
 import threading
@@ -155,16 +154,22 @@ class BacklogSearcher:
 
             if bestQualities:
                 highestBestQuality = max(bestQualities)
+                lowestBestQuality = min(bestQualities)
             else:
                 highestBestQuality = 0
+                lowestBestQuality=0
+
 
             # if we need a better one then say yes
             if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER) and curQuality < highestBestQuality) or curStatus == common.WANTED:
                 epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
-                if epObj.season not in wanted:
-                    wanted[epObj.season] = [epObj]
-                else:
-                    wanted[epObj.season].append(epObj)
+
+                # only fetch if not archive on first match, or if show is lowest than the lower expected quality
+                if(epObj.show.archive_firstmatch == 0 or curQuality < lowestBestQuality):
+                    if epObj.season not in wanted:
+                        wanted[epObj.season] = [epObj]
+                    else:
+                        wanted[epObj.season].append(epObj)
 
         return wanted
 

@@ -143,6 +143,18 @@ class Quality:
                       HDBLURAY: "720p BluRay",
                       FULLHDBLURAY: "1080p BluRay"}
 
+    sceneQualityStrings = {NONE: "N/A",
+                           UNKNOWN: "Unknown",
+                           SDTV: "HDTV",
+                           SDDVD: "",
+                           HDTV: "720p HDTV",
+                           RAWHDTV: "1080i HDTV",
+                           FULLHDTV: "1080p HDTV",
+                           HDWEBDL: "720p WEB-DL",
+                           FULLHDWEBDL: "1080p WEB-DL",
+                           HDBLURAY: "720p BluRay",
+                           FULLHDBLURAY: "1080p BluRay"}
+
     combinedQualityStrings = {ANYHDTV: "HDTV",
                               ANYWEBDL: "WEB-DL",
                               ANYBLURAY: "BluRay"}
@@ -272,6 +284,7 @@ class Quality:
 
             return ret
 
+#<<<<<<< HEAD
         if checkName([r"(pdtv|hd.?tv|dsr|tvrip).(xvid|x26[45]|h.?26[45])"], all) and not checkName([r"(720|1080)[pi]"],
                                                                                                    all) and \
                 not checkName([r"hr.ws.pdtv.x26[45]"], any):
@@ -284,18 +297,28 @@ class Quality:
         elif checkName([r"720p", r"hd.?tv", r"x26[45]"], all) or checkName([r"hr.ws.pdtv.x26[45]"],
                                                                            any) and not checkName(
             [r"1080[pi]"], all):
+#=======
+#        if (checkName([r"480p|web.?dl|web(rip|mux|hd)|[sph]d.?tv|dsr|tv(rip|mux)|satrip", r"xvid|divx|[xh].?26[45]"], all)
+#                and not checkName([r"(720|1080)[pi]"], all) and not checkName([r"hr.ws.pdtv.[xh].?26[45]"], any)):
+#            ret = Quality.SDTV
+#        elif (checkName([r"dvd(rip|mux)|b[rd](rip|mux)|blue?-?ray", r"xvid|divx|[xh].?26[45]"], all)
+#              and not checkName([r"(720|1080)[pi]"], all) and not checkName([r"hr.ws.pdtv.[xh].?26[45]"], any)):
+#            ret = Quality.SDDVD
+#        elif (checkName([r"720p", r"hd.?tv", r"[xh].?26[45]"], all) or checkName([r"hr.ws.pdtv.[xh].?26[45]"], any)
+#              and not checkName([r"1080[pi]"], all)):
+#>>>>>>> sickrage/develop
             ret = Quality.HDTV
         elif checkName([r"720p|1080i", r"hd.?tv", r"mpeg-?2"], all) or checkName([r"1080[pi].hdtv", r"h.?26[45]"], all):
             ret = Quality.RAWHDTV
-        elif checkName([r"1080p", r"hd.?tv", r"x26[45]"], all):
+        elif checkName([r"1080p", r"hd.?tv", r"[xh].?26[45]"], all):
             ret = Quality.FULLHDTV
-        elif checkName([r"720p", r"web.?dl|webrip"], all) or checkName([r"720p", r"itunes", r"h.?26[45]"], all):
+        elif checkName([r"720p", r"web.?dl|web(rip|mux|hd)"], all) or checkName([r"720p", r"itunes", r"[xh].?26[45]"], all):
             ret = Quality.HDWEBDL
-        elif checkName([r"1080p", r"web.?dl|webrip"], all) or checkName([r"1080p", r"itunes", r"h.?26[45]"], all):
+        elif checkName([r"1080p", r"web.?dl|web(rip|mux|hd)"], all) or checkName([r"1080p", r"itunes", r"[xh].?26[45]"], all):
             ret = Quality.FULLHDWEBDL
-        elif checkName([r"720p", r"blue?-?ray|hddvd|b[rd]rip", r"x26[45]"], all):
+        elif checkName([r"720p", r"blue?-?ray|hddvd|b[rd](rip|mux)", r"[xh].?26[45]"], all):
             ret = Quality.HDBLURAY
-        elif checkName([r"1080p", r"blue?-?ray|hddvd|b[rd]rip", r"x26[45]"], all):
+        elif checkName([r"1080p", r"blue?-?ray|hddvd|b[rd](rip|mux)", r"[xh].?26[45]"], all):
             ret = Quality.FULLHDBLURAY
 
         return ret
@@ -328,6 +351,14 @@ class Quality:
 
         # pylint: disable=R0912
 
+#<<<<<<< HEAD
+#=======
+#        from hachoir_parser import createParser
+#        from hachoir_metadata import extractMetadata
+#        from hachoir_core.log import log
+#        log.use_print = False
+#
+#>>>>>>> sickrage/develop
         try:
             parser = createParser(filename)
         # pylint: disable=W0703
@@ -367,8 +398,8 @@ class Quality:
             return Quality.UNKNOWN
 
         base_filename = os.path.basename(filename)
-        bluray = re.search(r'b[rd]rip|blue?-?ray', base_filename, re.I) is not None
-        webdl = re.search(r'web.?dl|webrip', base_filename, re.I) is not None
+        bluray = re.search(r"blue?-?ray|hddvd|b[rd](rip|mux)", base_filename, re.I) is not None
+        webdl = re.search(r"web.?dl|web(rip|mux|hd)", base_filename, re.I) is not None
 
         ret = Quality.UNKNOWN
         if height > 1000:
@@ -401,6 +432,65 @@ class Quality:
         return status, Quality.NONE
 
     @staticmethod
+    def sceneQualityFromName(name, quality):
+        """
+        Get scene naming parameters from filename and quality
+
+        :param name: Filename to check
+        :param quality: int of quality to make sure we get the right rip type
+        :return: encoder type for scene quality naming
+        """
+        codecList = ['xvid', 'divx']
+        x264List = ['x264', 'x 264', 'x.264']
+        h264List = ['h264', 'h 264', 'h.264', 'avc']
+        x265List = ['x265', 'x 265', 'x.265']
+        h265List = ['h265', 'h 265', 'h.265', 'hevc']
+        codecList.extend(x264List + h264List + x265List + h265List)
+
+        found_codecs = {}
+        found_codec = None
+
+        for codec in codecList:
+            if codec in name.lower():
+                found_codecs[name.lower().rfind(codec)] = codec
+
+        if found_codecs:
+            sorted_codecs = sorted(found_codecs, reverse=True)
+            found_codec = found_codecs[list(sorted_codecs)[0]]
+
+        # 2 corresponds to SDDVD quality
+        if quality == 2:
+            if re.search(r"b[rd](|.|-| )(rip|mux)", name.lower()):
+                rip_type = " BDRip"
+            elif re.search(r"dvd(|.|-| )(rip|mux)", name.lower()):
+                rip_type = " DVDRip"
+            else:
+                rip_type = ""
+
+        if found_codec:
+            if codecList[0] in found_codec:
+                found_codec = 'XviD'
+            elif codecList[1] in found_codec:
+                found_codec = 'DivX'
+            elif found_codec in x264List:
+                found_codec = x264List[0]
+            elif found_codec in h264List:
+                found_codec = h264List[0]
+            elif found_codec in x265List:
+                found_codec = x265List[0]
+            elif found_codec in h265List:
+                found_codec = h265List[0]
+
+            if quality == 2:
+                return rip_type + " " + found_codec
+            else:
+                return " " + found_codec
+        elif quality == 2:
+            return rip_type
+        else:
+            return ""
+
+    @staticmethod
     def statusFromName(name, assume=True, anime=False):
         """
         Get a status object from filename
@@ -430,15 +520,12 @@ Quality.FAILED = [Quality.compositeStatus(FAILED, x) for x in Quality.qualityStr
 Quality.SNATCHED_BEST = [Quality.compositeStatus(SNATCHED_BEST, x) for x in Quality.qualityStrings.keys()]
 Quality.ARCHIVED = [Quality.compositeStatus(ARCHIVED, x) for x in Quality.qualityStrings.keys()]
 
-SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])
-HD = Quality.combineQualities(
-    [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY],
-    [])  # HD720p + HD1080p
 HD720p = Quality.combineQualities([Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY], [])
 HD1080p = Quality.combineQualities([Quality.FULLHDTV, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY], [])
-ANY = Quality.combineQualities(
-    [Quality.SDTV, Quality.SDDVD, Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
-     Quality.HDBLURAY, Quality.FULLHDBLURAY, Quality.UNKNOWN], [])  # SD + HD
+
+SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])
+HD = Quality.combineQualities([HD720p, HD1080p], [])
+ANY = Quality.combineQualities([SD, HD], [])
 
 # legacy template, cant remove due to reference in mainDB upgrade?
 BEST = Quality.combineQualities([Quality.SDTV, Quality.HDTV, Quality.HDWEBDL], [Quality.HDTV])

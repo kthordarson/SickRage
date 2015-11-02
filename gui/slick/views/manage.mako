@@ -5,9 +5,9 @@
     from sickbeard.common import statusStrings
 %>
 <%block name="scripts">
-<script type="text/javascript" src="${sbRoot}/js/lib/bootbox.min.js?${sbPID}"></script>
-<script type="text/javascript" src="${sbRoot}/js/new/manage.js"></script>
-<script type="text/javascript" src="${sbRoot}/js/massUpdate.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/lib/bootbox.min.js?${sbPID}"></script>
+<script type="text/javascript" src="${srRoot}/js/new/manage.js"></script>
+<script type="text/javascript" src="${srRoot}/js/massUpdate.js?${sbPID}"></script>
 </%block>
 <%block name="content">
 <%namespace file="/inc_defs.mako" import="renderQualityPill"/>
@@ -27,7 +27,8 @@
             <th class="col-legend">Sports</th>
             <th class="col-legend">Scene</th>
             <th class="col-legend">Anime</th>
-            <th class="col-legend">Flat Folders</th>
+            <th class="col-legend">Season folders</th>
+            <th class="col-legend">Archive first match</th>
             <th class="col-legend">Paused</th>
             <th class="col-legend">Subtitle</th>
             <th class="col-legend">Default Ep<br>Status</th>
@@ -47,7 +48,7 @@
     <tfoot>
         <tr>
             <td rowspan="1" colspan="2" class="align-center alt"><input class="btn pull-left" type="button" value="Edit Selected" id="submitMassEdit" /></td>
-            <td rowspan="1" colspan="${(14, 15)[bool(sickbeard.USE_SUBTITLES)]}" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitMassUpdate" /></td>
+            <td rowspan="1" colspan="${(15, 16)[bool(sickbeard.USE_SUBTITLES)]}" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitMassUpdate" /></td>
         </tr>
     </tfoot>
 
@@ -101,14 +102,15 @@
         <% curRemove = "<input type=\"checkbox\" class=\"removeCheck\" id=\"remove-"+str(curShow.indexerid)+"\" "+curRemove_disabled+"/>" %>
         <tr>
             <td align="center"><input type="checkbox" class="editCheck" id="edit-${curShow.indexerid}" /></td>
-            <td class="tvShow"><a href="${sbRoot}/home/displayShow?show=${curShow.indexerid}">${curShow.name}</a></td>
+            <td class="tvShow"><a href="${srRoot}/home/displayShow?show=${curShow.indexerid}">${curShow.name}</a></td>
             <td align="center">${renderQualityPill(curShow.quality, showTitle=True)}</td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_sports) == 1]} width="16" height="16" /></td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_scene) == 1]} width="16" height="16" /></td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_anime) == 1]} width="16" height="16" /></td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.flatten_folders) == 1]} width="16" height="16" /></td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.paused) == 1]} width="16" height="16" /></td>
-            <td align="center"><img src="${sbRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.subtitles) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_sports) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_scene) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.is_anime) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[not int(curShow.flatten_folders) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.archive_firstmatch) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.paused) == 1]} width="16" height="16" /></td>
+            <td align="center"><img src="${srRoot}/images/${('no16.png" alt="N"', 'yes16.png" alt="Y"')[int(curShow.subtitles) == 1]} width="16" height="16" /></td>
             <td align="center">${statusStrings[curShow.default_ep_status]}</td>
             <td align="center">${curShow.status}</td>
             <td align="center">${curUpdate}</td>

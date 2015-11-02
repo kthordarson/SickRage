@@ -37,11 +37,10 @@ class TorrentRssProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, name)
         self.cache = TorrentRssCache(self)
 
-        self.urls = {'base_url': re.sub('\/$', '', url)}
+        self.urls = {'base_url': re.sub(r'\/$', '', url)}
 
         self.url = self.urls['base_url']
 
-        self.enabled = True
         self.ratio = None
         self.supportsBacklog = False
 
@@ -144,9 +143,9 @@ class TorrentRssProvider(generic.TorrentProvider):
             fileOut.close()
             helpers.chmodAsParent(dumpName)
         except IOError, e:
-            logger.log("Unable to save the file: " + ex(e), logger.ERROR)
+            logger.log("Unable to save the file: %s " % repr(e), logger.ERROR)
             return False
-        logger.log(u"Saved custom_torrent html dump " + dumpName + " ", logger.INFO)
+        logger.log(u"Saved custom_torrent html dump %s " % dumpName, logger.INFO)
         return True
 
     def seedRatio(self):
@@ -154,12 +153,12 @@ class TorrentRssProvider(generic.TorrentProvider):
 
 
 class TorrentRssCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, provider_obj):
+        tvcache.TVCache.__init__(self, provider_obj)
         self.minTime = 15
 
     def _getRSSData(self):
-        logger.log(u"TorrentRssCache cache update URL: " + self.provider.url, logger.DEBUG)
+        logger.log(u"Cache update URL: %s" % self.provider.url, logger.DEBUG)
 
         if self.provider.cookies:
             self.provider.headers.update({'Cookie': self.provider.cookies})
