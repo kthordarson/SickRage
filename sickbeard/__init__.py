@@ -36,20 +36,6 @@ from github import Github
 from sickbeard import metadata
 from sickbeard import providers
 from sickbeard.providers.generic import GenericProvider
-<<<<<<< HEAD
-#<<<<<<< HEAD
-from sickbeard.providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
-    omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, hounddawgs, nextgen, speedcd, nyaatorrents, animenzb, bluetigers, cpasbien, fnt, xthor, torrentbytes, \
-    frenchtorrentdb, freshontv, titansoftv, libertalia, morethantv, bitsoup, t411, tokyotoshokan, shazbat, rarbg, alpharatio, tntvillage, binsearch, \
-    scenetime, btdigg, strike, transmitthenet, tvchaosuk, deildu
-#from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
-#    omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, hounddawgs, nextgen, speedcd, nyaatorrents, animenzb, torrentbytes, \
-#    freshontv, morethantv, bitsoup, t411, tokyotoshokan, shazbat, rarbg, alpharatio, tntvillage, binsearch, scenetime, deildu
-#=======
-
-#>>>>>>> sickrage/develop
-=======
->>>>>>> 54de34736a32b36b0299bbf12b6216debcc319e5
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
@@ -642,7 +628,6 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'General')
         CheckSection(CFG, 'Blackhole')
         CheckSection(CFG, 'Newzbin')
-#	CheckSection(CFG, 'deildu')
         CheckSection(CFG, 'SABnzbd')
         CheckSection(CFG, 'NZBget')
         CheckSection(CFG, 'KODI')
@@ -948,18 +933,9 @@ def initialize(consoleLogging=True):
         NEWZBIN_USERNAME = check_setting_str(CFG, 'Newzbin', 'newzbin_username', '', censor_log=True)
         NEWZBIN_PASSWORD = check_setting_str(CFG, 'Newzbin', 'newzbin_password', '', censor_log=True)
 
-        deildu = bool(check_setting_int(CFG, 'deildu', 'deildu', 0))
-        deildu_USERNAME = check_setting_str(CFG, 'deildu', 'deildu_username', '', censor_log=True)
-        deildu_PASSWORD = check_setting_str(CFG, 'deildu', 'deildu_password', '', censor_log=True)
-
-#        SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
-#        SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
-#        SAB_APIKEY = check_setting_str(CFG, 'SABnzbd', 'sab_apikey', '')
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '', censor_log=True)
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '', censor_log=True)
         SAB_APIKEY = check_setting_str(CFG, 'SABnzbd', 'sab_apikey', '', censor_log=True)
-
-
         SAB_CATEGORY = check_setting_str(CFG, 'SABnzbd', 'sab_category', 'tv')
         SAB_CATEGORY_BACKLOG = check_setting_str(CFG, 'SABnzbd', 'sab_category_backlog', SAB_CATEGORY)
         SAB_CATEGORY_ANIME = check_setting_str(CFG, 'SABnzbd', 'sab_category_anime', 'anime')

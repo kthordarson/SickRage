@@ -163,9 +163,9 @@ class deilduProvider(generic.TorrentProvider):
                 if not data:
                     return []
                 databot = self.getURL(searchURLbot)
-                htmlbot = data.decode('cp1252')
+#                htmlbot = data.decode('cp1252')
                 htmlbot = BeautifulSoup(databot)
-                html = data.decode('cp1252')
+#                html = data.decode('cp1252')
                 html = BeautifulSoup(data)
 
                 try:

@@ -122,50 +122,6 @@ def remove_non_release_groups(name):
     # Check your database for funky release_names and add them here, to improve failed handling, archiving, and history.
     # select release_name from tv_episodes WHERE LENGTH(release_name);
     # [eSc], [SSG], [GWC] are valid release groups for non-anime
-<<<<<<< HEAD
-    removeWordsList = {r'\[rartv\]$':       'searchre',
-                       r'\[rarbg\]$':       'searchre',
-                       r'\[eztv\]$':        'searchre',
-                       r'\[ettv\]$':        'searchre',
-                       r'\[cttv\]$':        'searchre',
-                       r'\[vtv\]$':         'searchre',
-                       r'\[EtHD\]$':        'searchre',
-                       r'\[GloDLS\]$':      'searchre',
-                       r'\[silv4\]$':       'searchre',
-                       r'\[Seedbox\]$':     'searchre',
-                       r'\[PublicHD\]$':    'searchre',
-                       r'\[AndroidTwoU\]$': 'searchre',
-                       r'\.\[BT\]$':        'searchre',
-                       r' \[1044\]$':       'searchre',
-                       r'\.RiPSaLoT$':      'searchre',
-                       r'\.GiuseppeTnT$':   'searchre',
-                       r'\.Renc$':          'searchre',
-                       r'-NZBGEEK$':        'searchre',
-                       r'-Siklopentan$':    'searchre',
-                       r'-\SpastikusTV\]$':                 'searchre',
-                       r'-RP$':                             'searchre',
-                       r'-20-40$':                          'searchre',
-                       r'\.\[www\.usabit\.com\]$':          'searchre',
-                       r'^\[www\.Cpasbien\.pe\] ':          'searchre',
-                       r'^\[www\.Cpasbien\.com\] ':         'searchre',
-                       r'^\[ www\.Cpasbien\.pw \] ':        'searchre',
-                       r'^\.www\.Cpasbien\.pw':            'searchre',
-                       r'^\[www\.newpct1\.com\]':            'searchre',
-                       r'^\[ www\.Cpasbien\.com \] ':       'searchre',
-                       r'- \{ www\.SceneTime\.com \}$':     'searchre',
-                       r'^\{ www\.SceneTime\.com \} - ':    'searchre',
-                       r'^\[www\.frenchtorrentdb\.com\] ':  'searchre',
-                       r'^\]\.\[www\.tensiontorrent.com\] - ':      'searchre',
-                       r'^\]\.\[ www\.tensiontorrent.com \] - ':    'searchre',
-                       r'^\[ www\.torrenting\.com \] - ':           'searchre',
-                       r'^\[ www\.Torrenting\.com \] - ':           'searchre',
-                       r'^\[www\.OurRelease\.org\] ':             'searchre',
-                       r'\ - \[ www\.TorrentDay\.com \]':           'searchre',
-                       r'\[NO-RAR\] - \[ www\.torrentday\.com \]$': 'searchre',
-                       r'- \[ www\.torrentday\.com \]$':            'searchre',
-                       r'^\[ www\.TorrentDay\.com \] - ':           'searchre',
-                      }
-=======
     removeWordsList = {
         r'\[rartv\]$':       'searchre',
         r'\[rarbg\]$':       'searchre',
@@ -205,7 +161,6 @@ def remove_non_release_groups(name):
         r'^\[ www\.TorrentDay\.com \] - ':           'searchre',
         r'\[NO-RAR\] - \[ www\.torrentday\.com \]$': 'searchre',
     }
->>>>>>> 54de34736a32b36b0299bbf12b6216debcc319e5
 
     _name = name
     for remove_string, remove_type in removeWordsList.iteritems():
@@ -1669,15 +1624,6 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         logger.log(u"Connection timed out (sockets) accessing getURL %s Error: %r" % (url, ex(e)), logger.WARNING)
         return None
     except requests.exceptions.HTTPError as e:
-#<<<<<<< HEAD
-#        logger.log(u"HTTP error in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
-#        return None
-#    except requests.exceptions.ConnectionError as e:
-#        logger.log(u"Connection error to getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
-#        return None
-#    except requests.exceptions.Timeout as e:
-##        #logger.log(u"Connection timed out accessing getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
-#=======
         logger.log(u"HTTP error in getURL %s Error: %r" % (url, ex(e)), logger.WARNING)
         return None
     except requests.exceptions.ConnectionError as e:
@@ -1685,20 +1631,14 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         return None
     except requests.exceptions.Timeout as e:
         logger.log(u"Connection timed out accessing getURL %s Error: %r" % (url, ex(e)), logger.WARNING)
-#>>>>>>> sickrage/develop
         return None
     except requests.exceptions.ContentDecodingError:
-        #logger.log(u"Content-Encoding was gzip, but content was not compressed. getURL: %s" % url, logger.DEBUG)
-        #logger.log(traceback.format_exc(), logger.DEBUG)
+        logger.log(u"Content-Encoding was gzip, but content was not compressed. getURL: %s" % url, logger.DEBUG)
+        logger.log(traceback.format_exc(), logger.DEBUG)
         return None
     except Exception as e:
-#<<<<<<< HEAD
-#        #logger.log(u"Unknown exception in getURL %s Error: %s" % (url, ex(e)), logger.WARNING)
-#        #logger.log(traceback.format_exc(), logger.WARNING)
-#=======
         logger.log(u"Unknown exception in getURL %s Error: %r" % (url, ex(e)), logger.WARNING)
         logger.log(traceback.format_exc(), logger.WARNING)
-#>>>>>>> sickrage/develop
         return None
 
     return (resp.text, resp.content)[needBytes] if not json else resp.json()
@@ -1972,3 +1912,4 @@ def getDiskSpaceUsage(diskPath=None):
             return pretty_filesize(st.f_bavail * st.f_frsize)
     else:
         return False
+

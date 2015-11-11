@@ -76,12 +76,8 @@ def buildNameCache(show=None):
 
     :param show: Specify show to build name cache for, if None, just do all shows
     """
-<<<<<<< HEAD
-    global nameCache
-=======
     with nameCacheLock:
         sickbeard.scene_exceptions.retrieve_exceptions()
->>>>>>> 54de34736a32b36b0299bbf12b6216debcc319e5
 
     if not show:
         logger.log(u"Building internal name cache for all shows", logger.INFO)
@@ -98,3 +94,4 @@ def buildNameCache(show=None):
 
                 nameCache[name] = int(show.indexerid)
         logger.log(u"Internal name cache for " + show.name + " set to: [ " + u', '.join([key for key, value in nameCache.iteritems() if value == show.indexerid]) +" ]", logger.DEBUG)
+

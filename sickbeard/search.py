@@ -135,12 +135,6 @@ def snatchEpisode(result, endStatus=SNATCHED):
                 result.content = result.provider.getURL(result.url, needBytes=True)
 
             if result.content or result.url.startswith('magnet'):
-
-# TODO make subdirs in download folder for each series name
-# eg download/Dexter/ <- put dexter downloads here
-# eg download/True Blood/ <- put True Blood downloads here
-
-                logger.log(u"Starting torrent download for: " + str(result.show.name))
                 client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
                 dlResult = client.sendTORRENT(result)
             else:
@@ -214,7 +208,7 @@ def pickBestResult(results, show):
     for cur_result in results:
         if show and cur_result.show is not show:
             continue
-        logger.log(u"search_queue.py running pickbestresult for url " + cur_result.url)
+
 
         # build the black And white list
         if show.is_anime:
@@ -724,3 +718,4 @@ def searchProviders(show, episodes, manualSearch=False, downCurQuality=False):
                    logger.WARNING)
 
     return finalResults
+

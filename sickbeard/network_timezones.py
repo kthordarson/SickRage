@@ -32,31 +32,17 @@ am_regex = re.compile(r'(A[. ]? ?M)', flags=re.IGNORECASE)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.IGNORECASE)
 
 network_dict = None
-<<<<<<< HEAD
-
-if osname == 'nt' and tz.tzwinlocal is not None:
-    sb_timezone = tz.tzwinlocal()
-else:
-    sb_timezone = tz.tzlocal()
-=======
 sb_timezone = tz.tzwinlocal() if tz.tzwinlocal else tz.tzlocal()
 
->>>>>>> 54de34736a32b36b0299bbf12b6216debcc319e5
 # update the network timezone table
 def update_network_dict():
     """Update timezone information from SR repositories"""
 
     url = 'http://sickragetv.github.io/sb_network_timezones/network_timezones.txt'
     url_data = helpers.getURL(url, session=requests.Session())
-#<<<<<<< HEAD
-#    if url_data is None:
-#        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
-#        load_network_dict()
-#=======
     if not url_data:
         logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
         load_network_dict()
-#>>>>>>> sickrage/develop
         return
 
     d = {}
@@ -190,3 +176,4 @@ def test_timeformat(t):
         return False
     else:
         return True
+

@@ -295,3 +295,4 @@ def fifo(myList, item, maxSize = 100):
     if len(myList) >= maxSize:
         myList.pop(0)
     myList.append(item)
+
