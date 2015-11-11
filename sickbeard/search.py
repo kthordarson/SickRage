@@ -135,6 +135,12 @@ def snatchEpisode(result, endStatus=SNATCHED):
                 result.content = result.provider.getURL(result.url)
 
             if result.content or result.url.startswith('magnet'):
+
+# TODO make subdirs in download folder for each series name
+# eg download/Dexter/ <- put dexter downloads here
+# eg download/True Blood/ <- put True Blood downloads here
+
+                logger.log(u"Starting torrent download for: " + str(result.show.name))
                 client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
                 dlResult = client.sendTORRENT(result)
             else:
