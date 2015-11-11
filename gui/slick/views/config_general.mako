@@ -491,7 +491,7 @@
                                 <span class="component-title">Reverse proxy headers</span>
                                 <span class="component-desc">
                                     <input type="checkbox" name="handle_reverse_proxy" id="handle_reverse_proxy" ${('', 'checked="checked"')[bool(sickbeard.HANDLE_REVERSE_PROXY)]}/>
-                                    <p>accept the following reverse proxy headers (advanced)...<br />(X-Forwarded-For, X-Forwarded-Host, and X-Forwarded-Proto)</p>
+                                    <p>accept the following reverse proxy headers (advanced)...<br>(X-Forwarded-For, X-Forwarded-Host, and X-Forwarded-Proto)</p>
                                 </span>
                             </label>
                         </div>
@@ -588,6 +588,17 @@
                                     <input type="checkbox" name="calendar_unprotected" id="calendar_unprotected" ${('', 'checked="checked"')[bool(sickbeard.CALENDAR_UNPROTECTED)]}/>
                                     <p>allow subscribing to the calendar without user and password.
                                     Some services like Google Calendar only work this way</p>
+                                </span>
+
+                            </label>
+                        </div>
+
+                        <div class="field-pair">
+                            <label for="calendar_icons">
+                                <span class="component-title">Google Calendar Icons</span>
+                                <span class="component-desc">
+                                    <input type="checkbox" name="calendar_icons" id="calendar_icons" ${('', 'checked="checked"')[bool(sickbeard.CALENDAR_ICONS)]}/>
+                                    <p>show an icon next to exported calendar events in Google Calendar.</p>
                                 </span>
 
                             </label>
@@ -762,7 +773,7 @@
 
                 </div><!-- /component-group3 //-->
 
-                <br/>
+                <br>
                 <h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">${sickbeard.DATA_DIR}</span></b> </h6>
                 <input type="submit" class="btn pull-left config_submitter button" value="Save Changes" />
 

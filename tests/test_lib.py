@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 
 import sys, os.path
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../lib')))
@@ -28,8 +27,7 @@ import unittest
 from configobj import ConfigObj
 import sickbeard
 
-from sickbeard import providers, tvcache
-from sickbeard import db
+from sickbeard import db, providers
 from sickbeard.databases import mainDB
 from sickbeard.databases import cache_db, failed_db
 from sickbeard.tv import TVEpisode
@@ -146,7 +144,7 @@ class TestDBConnection(db.DBConnection, object):
         super(TestDBConnection, self).__init__(dbFileName)
 
 class TestCacheDBConnection(TestDBConnection, object):
-     def __init__(self, providerName):
+    def __init__(self, providerName):
         db.DBConnection.__init__(self, os.path.join(TESTDIR, TESTCACHEDBNAME))
 
         # Create the table if it's not already there

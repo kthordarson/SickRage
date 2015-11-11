@@ -105,7 +105,7 @@
                                 <span class="component-title">Ignore words</span>
                                 <span class="component-desc">
                                     <input type="text" name="ignore_words" value="${sickbeard.IGNORE_WORDS}" class="form-control input-sm input350" />
-                                    <div class="clear-left">results with one or more word from this list will be ignored<br />
+                                    <div class="clear-left">results with one or more word from this list will be ignored<br>
                                     separate words with a comma, e.g. "word1,word2,word3"
                                     </div>
                                 </span>
@@ -117,7 +117,7 @@
                                 <span class="component-title">Require words</span>
                                 <span class="component-desc">
                                     <input type="text" name="require_words" value="${sickbeard.REQUIRE_WORDS}" class="form-control input-sm input350" />
-                                    <div class="clear-left">results with no word from this list will be ignored<br />
+                                    <div class="clear-left">results with no word from this list will be ignored<br>
                                     separate words with a comma, e.g. "word1,word2,word3"
                                     </div>
                                 </span>
@@ -129,8 +129,8 @@
                                 <span class="component-title">Ignore language names in subbed results</span>
                                 <span class="component-desc">
                                     <input type="text" name="ignored_subs_list" value="${sickbeard.IGNORED_SUBS_LIST}" class="form-control input-sm input350" />
-                                    <div class="clear-left">Ignore subbed releases based on language names <br />
-                                    Example: "dk" will ignore words: dksub, dksubs, dksubbed, dksubed <br />
+                                    <div class="clear-left">Ignore subbed releases based on language names <br>
+                                    Example: "dk" will ignore words: dksub, dksubs, dksubbed, dksubed <br>
                                     separate languages with a comma, e.g. "lang1,lang2,lang3
                                     </div>
                                 </span>
@@ -276,6 +276,16 @@
 
                             <div class="field-pair">
                                 <label>
+                                    <span class="component-title">Use SABnzbd category (backlog episodes)</span>
+                                    <span class="component-desc">
+                                        <input type="text" name="sab_category_backlog" id="sab_category_backlog" value="${sickbeard.SAB_CATEGORY_BACKLOG}" class="form-control input-sm input200" />
+                                        <p>add downloads of old episodes to this category (e.g. TV)</p>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="field-pair">
+                                <label>
                                     <span class="component-title">Use SABnzbd category for anime</span>
                                     <span class="component-desc">
                                         <input type="text" name="sab_category_anime" id="sab_category_anime" value="${sickbeard.SAB_CATEGORY_ANIME}" class="form-control input-sm input200" />
@@ -283,6 +293,18 @@
                                     </span>
                                 </label>
                             </div>
+
+
+                            <div class="field-pair">
+                                <label>
+                                    <span class="component-title">Use SABnzbd category for anime (backlog episodes)</span>
+                                    <span class="component-desc">
+                                        <input type="text" name="sab_category_anime_backlog" id="sab_category_anime_backlog" value="${sickbeard.SAB_CATEGORY_ANIME_BACKLOG}" class="form-control input-sm input200" />
+                                        <p>add anime downloads of old episodes to this category (e.g. anime)</p>
+                                    </span>
+                                </label>
+                            </div>
+
                             % if sickbeard.ALLOW_HIGH_PRIORITY == True:
                             <div class="field-pair">
                                 <label for="sab_forced">
@@ -350,10 +372,30 @@
 
                             <div class="field-pair">
                                 <label>
+                                    <span class="component-title">Use NZBget category (backlog episodes)</span>
+                                    <span class="component-desc">
+                                        <input type="text" name="nzbget_category_backlog" id="nzbget_category_backlog" value="${sickbeard.NZBGET_CATEGORY_BACKLOG}" class="form-control input-sm input200" />
+                                        <p>send downloads of old episodes marked this category (e.g. TV)</p>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="field-pair">
+                                <label>
                                     <span class="component-title">Use NZBget category for anime</span>
                                     <span class="component-desc">
                                         <input type="text" name="nzbget_category_anime" id="nzbget_category_anime" value="${sickbeard.NZBGET_CATEGORY_ANIME}" class="form-control input-sm input200" />
                                         <p>send anime downloads marked this category (e.g. anime)</p>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="field-pair">
+                                <label>
+                                    <span class="component-title">Use NZBget category for anime (backlog episodes)</span>
+                                    <span class="component-desc">
+                                        <input type="text" name="nzbget_category_anime_backlog" id="nzbget_category_anime_backlog" value="${sickbeard.NZBGET_CATEGORY_ANIME_BACKLOG}" class="form-control input-sm input200" />
+                                        <p>send anime downloads of old episodes marked this category (e.g. anime)</p>
                                     </span>
                                 </label>
                             </div>
@@ -378,7 +420,7 @@
 
                         <div class="testNotification" id="testSABnzbd_result">Click below to test</div>
                         <input class="btn" type="button" value="Test SABnzbd" id="testSABnzbd" class="btn test-button"/>
-                        <input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+                        <input type="submit" class="btn config_submitter" value="Save Changes" /><br>
 
                         </div><!-- /content_use_nzbs //-->
 
@@ -411,8 +453,8 @@
                                 <span class="component-title">Send .torrent files to:</span>
                                 <span class="component-desc">
                                 <select name="torrent_method" id="torrent_method" class="form-control input-sm">
-<% torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'deluge': "Deluge (via WebUI)", 'deluged': "Deluge (via Daemon)", 'download_station': "Synology DS", 'rtorrent': "rTorrent", 'qbittorrent': "qbittorrent"} %>
-% for curAction in ('blackhole', 'utorrent', 'transmission', 'deluge', 'deluged', 'download_station', 'rtorrent', 'qbittorrent'):
+<% torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'deluge': "Deluge (via WebUI)", 'deluged': "Deluge (via Daemon)", 'download_station': "Synology DS", 'rtorrent': "rTorrent", 'qbittorrent': "qbittorrent", 'mlnet': "MLDonkey"} %>
+% for curAction in ('blackhole', 'utorrent', 'transmission', 'deluge', 'deluged', 'download_station', 'rtorrent', 'qbittorrent', 'mlnet'):
                                 <option value="${curAction}" ${('', 'selected="selected"')[sickbeard.TORRENT_METHOD == curAction]}>${torrent_method_text[curAction]}</option>
 % endfor
                                 </select>
@@ -430,7 +472,7 @@
                             </div>
 
                             <div></div>
-                            <input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+                            <input type="submit" class="btn config_submitter" value="Save Changes" /><br>
                             </div>
                         </div>
 
@@ -571,13 +613,13 @@
 
                             <div class="testNotification" id="test_torrent_result">Click below to test</div>
                             <input class="btn" type="button" value="Test Connection" id="test_torrent" class="btn test-button"/>
-                            <input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+                            <input type="submit" class="btn config_submitter" value="Save Changes" /><br>
                             </div>
                     </div><!-- /content_use_torrents //-->
                     </fieldset>
                 </div><!-- /component-group3 //-->
 
-                <br/>
+                <br>
                 <h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">${sickbeard.DATA_DIR}</span></b> </h6>
                 <input type="submit" class="btn pull-left config_submitter button" value="Save Changes" />
 
